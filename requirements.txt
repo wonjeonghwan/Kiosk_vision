@@ -1,0 +1,6 @@
+opencv-python
+ultralytics
+face-recognition
+numpy
+Pillow
+deep-sort-realtime
