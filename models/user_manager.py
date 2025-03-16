@@ -32,19 +32,3 @@ def prevent_duplicate_registration(track_id, temporary_storage):
         return True
     temporary_storage[track_id] = True
     return False
-
-# # 사용자에게 이름을 입력받아 신규 얼굴 등록(Deepsort)
-# def request_user_name(track_id):
-#     """
-#     새로운 얼굴이 감지되었을 때 사용자에게 이름을 입력받아 DB에 저장
-#     :param track_id: DeepSORT가 할당한 고유 ID
-#     :return: 입력된 이름 (취소 시 None)
-#     """
-#     cv2.destroyAllWindows()  # 입력 창을 띄우기 위해 OpenCV 창 닫기
-#     print(f"🎤 새로운 사용자를 감지했습니다. (ID: {track_id}) 이름을 입력하세요. (취소하려면 C 입력)")
-
-#     new_name = input("이름 입력: ").strip()
-#     if new_name.lower() == "c":
-#         return None
-
-#     return new_name
