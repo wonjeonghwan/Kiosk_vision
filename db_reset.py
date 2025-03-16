@@ -10,7 +10,7 @@ cursor.execute("DROP TABLE IF EXISTS faces")
 # 새 테이블 생성 (UUID 적용)
 cursor.execute("""
     CREATE TABLE faces (
-        id TEXT PRIMARY KEY,  -- UUID를 기본 키로 사용
+        id INTEGER PRIMARY KEY,  -- UUID를 기본 키로 사용
         name TEXT NOT NULL,
         encoding BLOB NOT NULL
     )
@@ -19,4 +19,4 @@ cursor.execute("""
 conn.commit()
 conn.close()
 
-print("✅ faces.db 초기화 완료! (UUID 적용)")
+print("✅ faces.db 초기화 완료! (UUID 미적용)")
