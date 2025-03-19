@@ -13,3 +13,5 @@ DELETE_TIMEOUT = 300  # 300프레임 후 DB에서 삭제
 
 # 폰트 설정 (한글 출력을 위해)
 FONT_PATH = "malgun.ttf"
+
+DB_PATH = "faces.db"

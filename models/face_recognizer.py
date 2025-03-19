@@ -1,10 +1,10 @@
 import face_recognition
 import cv2
 import numpy as np
+from models.config import REQUIRED_FRAMES
 
 # 얼굴 감지 상태 저장 (새로운 사용자 확인을 위한 변수)
-face_stable_count = 0
-REQUIRED_FRAMES = 30  # 30프레임 이상 유지될 때만 새로운 사용자로 판단
+face_stable_count = 0  # 30프레임 이상 유지될 때만 새로운 사용자로 판단
 temporary_encodings = []  # ✅ 새로운 사용자의 다양한 얼굴을 저장하는 리스트
 
 def extract_face_embeddings(frame):
@@ -12,7 +12,7 @@ def extract_face_embeddings(frame):
     global face_stable_count, temporary_encodings
 
     h, w, _ = frame.shape
-    x1, y1, x2, y2 = w//3, h//3, 2*w//3, 2*h//3  # 중앙 부분 네모 영역
+    x1, y1, x2, y2 = w//3, h//4, 2*w//3, 3*h//4  # 중앙 부분 네모 영역
     face_crop = frame[y1:y2, x1:x2]
 
     if face_crop is None or face_crop.size == 0:

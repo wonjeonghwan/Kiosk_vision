@@ -1,8 +1,7 @@
 import sqlite3
 import numpy as np
 import pickle
-
-DB_PATH = "faces.db"
+from models.config import DB_PATH
 
 def initialize_database():
     """ 데이터베이스 초기화 (테이블 생성) """
