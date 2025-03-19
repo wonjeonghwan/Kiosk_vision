@@ -19,4 +19,4 @@ cursor.execute("""
 conn.commit()
 conn.close()
 
-print("✅ faces.db 초기화 완료! (UUID 미적용)")
+print("✅ faces.db 초기화 완료!")
