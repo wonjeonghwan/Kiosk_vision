@@ -21,17 +21,22 @@ def extract_face_embeddings(frame):
         return None, (x1, y1, x2, y2), 0  # 진행도 0%
 
     rgb_face = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
-    encodings = face_recognition.face_encodings(rgb_face)
- 
+    face_locations = face_recognition.face_locations(rgb_face)  # 감지된 얼굴 위치 리스트
+    encodings = face_recognition.face_encodings(rgb_face, face_locations)
+
     if encodings:
+        # ✅ 가장 큰 얼굴 하나만 선택 (영역 크기로 비교)
+        largest_face_index = max(range(len(face_locations)), key=lambda i: (face_locations[i][2] - face_locations[i][0]) * (face_locations[i][1] - face_locations[i][3]))
+        largest_encoding = encodings[largest_face_index]
+
         face_stable_count = min(REQUIRED_FRAMES, face_stable_count + 1)  # 얼굴이 감지되면 카운트 증가
-        temporary_encodings.append(encodings[0])  # ✅ 새로운 사용자일 경우 다양한 얼굴 저장
+        temporary_encodings.append(largest_encoding)  # ✅ 새로운 사용자일 경우 다양한 얼굴 저장
     else:
         face_stable_count = max(0, face_stable_count - 1)  # 얼굴이 없으면 안정 시간 감소
         temporary_encodings.clear()  # 얼굴이 사라지면 임시 저장 데이터 삭제
 
     progress = int((face_stable_count / REQUIRED_FRAMES) * 100)  # 0~100% 진행률 계산
-    return encodings[0] if encodings else None, (x1, y1, x2, y2), progress
+    return largest_encoding if encodings else None, (x1, y1, x2, y2), progress
 
 # # 전체 화면에서 얼굴 감지 - 얼굴에서 특징 벡터(128차원) 추출
 # def extract_face_embeddings(frame, bbox):
