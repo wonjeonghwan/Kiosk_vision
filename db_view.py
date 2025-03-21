@@ -2,7 +2,7 @@ import sqlite3
 import pandas as pd
 
 # 데이터베이스 연결
-conn = sqlite3.connect("faces.db")
+conn = sqlite3.connect("Comfile_Coffee_DB.db")
 cursor = conn.cursor()
 
 # 테이블 목록 확인

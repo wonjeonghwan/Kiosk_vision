@@ -1,3 +1,4 @@
+import torch
 import cv2
 import numpy as np
 import face_recognition
@@ -5,7 +6,16 @@ from deep_sort_realtime.deepsort_tracker import DeepSort
 from PIL import ImageFont, ImageDraw, Image
 from models.config import FONT_PATH
 
-tracker = DeepSort(max_age=15)
+# ✅ GPU 설정
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
+tracker = DeepSort(
+    max_age=15,
+    embedder="mobilenet",  # 가벼운 모델 사용
+    half=True,  # FP16 연산으로 속도 개선
+    embedder_gpu=(device.type == "cuda")  # ✅ GPU 사용 설정
+)
 
 def cosine_similarity(a, b):
     a, b = np.array(a), np.array(b)

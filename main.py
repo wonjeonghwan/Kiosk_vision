@@ -1,4 +1,5 @@
 # main.py
+import torch
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -8,8 +9,12 @@ from models.db_manager import save_face, find_best_match
 from PIL import ImageFont, ImageDraw, Image
 from models.config import MAX_LOST_FRAMES, THRESHOLD
 
+# ✅ GPU 설정
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
 FONT_PATH = "malgun.ttf"
-model = YOLO("models/yolov8n.pt")
+model = YOLO("models/yolov8n.pt").to(device)
 cap = cv2.VideoCapture(0)
 
 target_embedding = None
@@ -26,10 +31,10 @@ while True:
         encoding, (x1, y1, x2, y2), progress = extract_face_embeddings(frame)
 
         if encoding is not None:
-            user_id, name = find_best_match(encoding, threshold=THRESHOLD)
+            user_id, name, similarity = find_best_match(encoding, threshold=THRESHOLD)
 
-            if user_id:
-                print(f"✅ 기존 사용자 인식됨: {name}")
+            if user_id and similarity >= THRESHOLD:
+                print(f"✅ 기존 사용자 인식됨: {name} (유사도 {similarity:.2f})")
                 target_embedding = encoding
                 user_name = name
                 tracking_enabled = True

@@ -40,15 +40,21 @@ def find_best_match(encoding, threshold=THRESHOLD):
 
     best_match_id = None
     best_match_name = None
-    min_distance = threshold
+    best_similarity = 0
 
     for row in rows:
-        stored_encoding = pickle.loads(row[2])  # 바이너리 데이터를 Numpy 배열로 변환
-        distance = np.linalg.norm(encoding - stored_encoding)
+        stored_encoding = pickle.loads(row[2])
+        norm_product = np.linalg.norm(encoding) * np.linalg.norm(stored_encoding)
+        if norm_product == 0:
+            continue
+        similarity = np.dot(encoding, stored_encoding) / norm_product
 
-        if distance < min_distance:
-            min_distance = distance
+        if similarity > best_similarity:
+            best_similarity = similarity
             best_match_id = row[0]
             best_match_name = row[1]
 
-    return best_match_id, best_match_name
+    if best_similarity >= threshold:
+        return best_match_id, best_match_name, best_similarity
+    else:
+        return None, None, best_similarity
