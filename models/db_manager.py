@@ -1,7 +1,7 @@
 import sqlite3
 import numpy as np
 import pickle
-from models.config import DB_PATH
+from models.config import DB_PATH, THRESHOLD
 
 def initialize_database():
     """ 데이터베이스 초기화 (테이블 생성) """
@@ -30,7 +30,7 @@ def save_face(name, encodings):
     conn.commit()
     conn.close()
 
-def find_best_match(encoding, threshold=0.45):
+def find_best_match(encoding, threshold=THRESHOLD):
     """ 기존 사용자와 얼굴 매칭 """
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
