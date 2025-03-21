@@ -1,20 +1,15 @@
 # main.py
-import torch
 import cv2
 import numpy as np
 from ultralytics import YOLO
 from models.deepsort_tracker import track_target_face
-from models.face_recognizer import extract_face_embeddings, temporary_encodings
+from models.face_recognizer import extract_face_embeddings, temporary_encodings, reset_recognition_state
 from models.db_manager import save_face, find_best_match
 from PIL import ImageFont, ImageDraw, Image
 from models.config import MAX_LOST_FRAMES, THRESHOLD
 
-# ✅ GPU 설정
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-
 FONT_PATH = "malgun.ttf"
-model = YOLO("models/yolov8n.pt").to(device)
+model = YOLO("models/yolov8n.pt")
 cap = cv2.VideoCapture(0)
 
 target_embedding = None
@@ -69,6 +64,7 @@ while True:
             target_embedding = None
             user_name = ""
             lost_frame_count = 0
+            reset_recognition_state()
 
     # UI
     frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
