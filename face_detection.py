@@ -10,10 +10,10 @@ import time
 
 # 설정값
 SIMILARITY_THRESHOLD = 0.45
-REQUIRED_FRAMES = 15
+REQUIRED_FRAMES = 7
 DISAPPEAR_FRAMES = 90
 MAX_LOST_FRAMES = 100
-THRESHOLD = 0.85
+THRESHOLD = 0.9
 TRACKER_MAX_AGE = 90
 DELETE_TIMEOUT = 300
 FONT_PATH = "malgun.ttf"
@@ -83,10 +83,10 @@ def save_face(name, encodings):
     print("DB 저장 완료")
 
 def find_best_match(encoding, threshold=THRESHOLD):
-    """얼굴 매칭"""
+    """얼굴 매칭 - 다중 메트릭 (전체 인코딩, 유클리드 거리, 압축 인코딩)을 40:30:30 비율로 조합"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT user_id, name, face_encoding FROM users WHERE face_encoding IS NOT NULL")  # NULL이 아닌 데이터만 조회
+    cursor.execute("SELECT user_id, name, face_encoding FROM users WHERE face_encoding IS NOT NULL")
     rows = cursor.fetchall()
     conn.close()
 
@@ -94,31 +94,50 @@ def find_best_match(encoding, threshold=THRESHOLD):
     best_match_name = None
     best_similarity = 0
 
-    for row in rows:
-        if row[2] is not None:  # 추가 안전장치
-            try:
-                stored_encoding = pickle.loads(row[2])
-                norm_product = np.linalg.norm(encoding) * np.linalg.norm(stored_encoding)
-                if norm_product == 0:
-                    continue
-                similarity = np.dot(encoding, stored_encoding) / norm_product
+    # Metric 2 (유클리드)에서 사용할 최대 기대값. 실험에 따라 조정 필요.
+    euclid_max = 0.6
 
-                if similarity > best_similarity:
-                    best_similarity = similarity
-                    best_match_id = row[0]
-                    best_match_name = row[1]
-            except Exception as e:
-                print(f"얼굴 매칭 중 오류 발생: {e}")
-                continue
+    # Metric 1: 전체 인코딩의 코사인 유사도를 계산하기 위해 정규화
+    norm_input = encoding / np.linalg.norm(encoding)
+    # Metric 3: 압축(짝수 인덱스) 인코딩 (128->64) 정규화
+    reduced_input = encoding[::2]
+    norm_reduced_input = reduced_input / np.linalg.norm(reduced_input)
+
+    for row in rows:
+        try:
+            stored_encoding = pickle.loads(row[2])
+            # Metric 1: 전체 인코딩 코사인 유사도
+            norm_stored = stored_encoding / np.linalg.norm(stored_encoding)
+            cos_sim = np.dot(norm_input, norm_stored)
+            
+            # Metric 2: 유클리드 거리 기반 유사도
+            euclid_distance = np.linalg.norm(encoding - stored_encoding)
+            sim_euclid = max(0, 1 - (euclid_distance / euclid_max))
+            
+            # Metric 3: 압축 인코딩 (짝수 인덱스만) 코사인 유사도
+            reduced_stored = stored_encoding[::2]
+            norm_reduced_stored = reduced_stored / np.linalg.norm(reduced_stored)
+            cos_sim_reduced = np.dot(norm_reduced_input, norm_reduced_stored)
+            
+            # 40:30:30 비율로 종합 유사도 계산
+            overall_similarity = 0.4 * cos_sim + 0.3 * sim_euclid + 0.3 * cos_sim_reduced
+
+            if overall_similarity > best_similarity:
+                best_similarity = overall_similarity
+                best_match_id = row[0]
+                best_match_name = row[1]
+        except Exception as e:
+            print(f"얼굴 매칭 중 오류 발생: {e}")
+            continue
 
     if best_similarity >= threshold:
         return best_match_id, best_match_name, best_similarity
     return None, None, best_similarity
 
+
 def extract_face_embeddings(frame):
-    """얼굴 특징 추출"""
     global face_stable_count, temporary_encodings
-    
+
     h, w, _ = frame.shape
     x1, y1, x2, y2 = w//3, h//4, 2*w//3, 3*h//4
     face_crop = frame[y1:y2, x1:x2]
@@ -126,7 +145,7 @@ def extract_face_embeddings(frame):
     if face_crop is None or face_crop.size == 0:
         face_stable_count = 0
         temporary_encodings.clear()
-        return None, (x1, y1, x2, y2), 0
+        return None, (x1, y1, x2, y2), 0, None
     
     rgb_face = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
     face_locations = face_recognition.face_locations(rgb_face)
@@ -145,33 +164,38 @@ def extract_face_embeddings(frame):
                     best_encoding = encoding
         
         if best_encoding is not None:
-            face_stable_count = min(REQUIRED_FRAMES, face_stable_count + 1)
-            temporary_encodings.append(best_encoding)
-            
-            if face_stable_count >= REQUIRED_FRAMES:
-                # 충분한 프레임이 모였을 때 매칭 시도
-                mean_encoding = np.mean(temporary_encodings, axis=0)
-                match = find_best_match(mean_encoding)
+            # 즉시 매칭 시도
+            immediate_match = find_best_match(best_encoding)
+            if immediate_match[0] is not None:
+                print(f"즉시 매칭됨: ID:{immediate_match[0]}, NAME:{immediate_match[1]}")
+                temporary_encodings.clear()
+                face_stable_count = 0
+                return best_encoding, (x1, y1, x2, y2), 100, immediate_match
+            else:
+                # 안정화(누적) 단계 진행
+                face_stable_count = min(REQUIRED_FRAMES, face_stable_count + 1)
+                temporary_encodings.append(best_encoding)
                 
-                if match[0] is not None:
-                    # 기존 사용자 발견
-                    print(f"ID:{match[0]},NAME:{match[1]}")
-                    temporary_encodings.clear()
-                    face_stable_count = 0
-                    return mean_encoding, (x1, y1, x2, y2), 100
-                else:
-                    # 새로운 사용자 - DB에 저장
-                    print("NEW_FACE - 저장 완료")
-                    save_face("Unknown", mean_encoding)
-                    temporary_encodings.clear()
-                    face_stable_count = 0
-                    return None, (x1, y1, x2, y2), 0
-            
-            return None, (x1, y1, x2, y2), int((face_stable_count / REQUIRED_FRAMES) * 100)
+                if face_stable_count >= REQUIRED_FRAMES:
+                    mean_encoding = np.mean(temporary_encodings, axis=0)
+                    stable_match = find_best_match(mean_encoding)
+                    if stable_match[0] is not None:
+                        print(f"안정화 매칭됨: ID:{stable_match[0]}, NAME:{stable_match[1]}")
+                        temporary_encodings.clear()
+                        face_stable_count = 0
+                        return mean_encoding, (x1, y1, x2, y2), 100, stable_match
+                    else:
+                        print("NEW_FACE - 사용자 이름 입력 대기")
+                        temporary_encodings.clear()
+                        face_stable_count = 0
+                        return mean_encoding, (x1, y1, x2, y2), 100, None
+                
+                return None, (x1, y1, x2, y2), int((face_stable_count / REQUIRED_FRAMES) * 100), None
     
     face_stable_count = 0
     temporary_encodings.clear()
-    return None, (x1, y1, x2, y2), 0
+    return None, (x1, y1, x2, y2), 0, None
+
 
 def track_target_face(frame, target_embedding):
     """얼굴 추적"""

@@ -101,17 +101,15 @@ class WaitingScreen(Screen):
             Clock.unschedule(self.update_camera)
 
     def update_camera(self, dt):
-        """카메라 프레임 업데이트"""
         if self.camera and not self.is_waiting_for_name:
             ret, frame = self.camera.read()
             if ret:
-                # 얼굴 인식 처리
-                encoding, (x1, y1, x2, y2), progress = extract_face_embeddings(frame)
+                # 얼굴 인식 처리 및 매칭 결과 함께 받기
+                encoding, (x1, y1, x2, y2), progress, match_result = extract_face_embeddings(frame)
                 
                 # 녹색 네모와 진행률 표시
                 if x1 is not None and y1 is not None and x2 is not None and y2 is not None:
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    # 한글 텍스트 표시를 위한 PIL 사용
                     frame_pil = PILImage.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                     draw = ImageDraw.Draw(frame_pil)
                     font = ImageFont.truetype(SYSTEM_FONT_PATH, 30)
@@ -119,23 +117,26 @@ class WaitingScreen(Screen):
                     frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
                 
                 if encoding is not None and progress >= 100:
-                    try:
-                        # print("얼굴 인코딩 생성됨:", encoding.shape)  # 인코딩 형태 확인
+                    if match_result is not None and match_result[0] is not None:
+                        # DB에 등록된 사용자 발견 → 메뉴 화면으로 전환
+                        global recognized_user_name
+                        recognized_user_name = match_result[1]
                         self.target_embedding = encoding
                         self.current_encoding = encoding
-                        # print("현재 인코딩 저장됨:", self.current_encoding.shape)  # 저장된 인코딩 확인
+                        self.manager.current = "menu"
+                    else:
+                        # 신규 사용자 → 이름 입력 대기
+                        self.target_embedding = encoding
+                        self.current_encoding = encoding
                         self.is_waiting_for_name = True
                         self.user_label.text = "새로운 사용자입니다\n이름을 입력하고 엔터를 눌러주세요"
                         Window.bind(on_textinput=self._on_text_input)
-                    except Exception as e:
-                        print(f"얼굴 인식 오류: {e}")
-                        self.user_label.text = "얼굴 인식 중 오류가 발생했습니다"
-
-                # OpenCV BGR을 RGB로 변환
+                
                 buf = cv2.flip(frame, 0).tobytes()
                 texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='bgr')
                 texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
                 self.camera_image.texture = texture
+
 
     def _on_text_input(self, window, text):
         """이름 입력 처리 (on_textinput 이벤트 핸들러)"""
