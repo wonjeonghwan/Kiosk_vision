@@ -11,7 +11,7 @@ tables = cursor.fetchall()
 print(f"📌 존재하는 테이블: {tables}")
 
 # faces 테이블 데이터 조회
-df = pd.read_sql_query("SELECT * FROM faces", conn)
+df = pd.read_sql_query("SELECT * FROM users", conn)
 conn.close()
 
 print("📌 데이터베이스 내용:")
