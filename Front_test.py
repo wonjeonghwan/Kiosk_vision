@@ -13,8 +13,11 @@ from face_detection import extract_face_embeddings, track_target_face, find_best
 from PIL import Image as PILImage, ImageDraw, ImageFont
 import sqlite3
 
+
 # 윈도우 기본 한글 폰트 경로
 SYSTEM_FONT_PATH = "C:/Windows/Fonts/malgun.ttf"
+
+BACK_IMG = "Source\BG_pattern.png"
 
 # 전역 변수: 주문번호 (발급페이지 노출 시마다 1씩 증가)
 order_number = 0
@@ -33,7 +36,7 @@ class WaitingScreen(Screen):
         
         # 배경 이미지
         self.bg_image = Image(
-            source='gunssak.jpeg',
+            source=BACK_IMG,
             fit_mode='fill',
             size_hint=(1, 1),
             pos_hint={'x': 0, 'y': 0}
@@ -199,6 +202,16 @@ class MenuDecisionScreen(Screen):
     def __init__(self, **kwargs):
         super(MenuDecisionScreen, self).__init__(**kwargs)
         self.layout = FloatLayout()
+
+                # 배경 이미지
+        self.bg_image = Image(
+            source=BACK_IMG,
+            fit_mode='fill',
+            size_hint=(1, 1),
+            pos_hint={'x': 0, 'y': 0}
+        )
+        self.layout.add_widget(self.bg_image)
+
         self.label = Label(
             text="메뉴 결정 페이지\n(a 버튼을 눌러 진행)\n(s 버튼을 누르면 대기화면으로)",
             font_name=SYSTEM_FONT_PATH,

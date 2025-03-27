@@ -254,7 +254,7 @@ def main():
         else:
             # 얼굴 추적 모드
             current_time = time.time()
-            if current_time - last_tracking_time >= 1.0:  # 1초마다 추적 상태 전송
+            if current_time - last_tracking_time >= 3.0:  # 3초마다 추적 상태 전송
                 face_found = track_target_face(frame, target_embedding)
                 if not face_found:
                     lost_frame_count += 1
