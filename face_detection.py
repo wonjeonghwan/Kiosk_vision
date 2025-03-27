@@ -16,7 +16,7 @@ THRESHOLD = 0.8
 TRACKER_MAX_AGE = 90
 DELETE_TIMEOUT = 300
 DB_PATH = "Comfile_Coffee_DB.db"
-SYSTEM_FONT_PATH = "C:/Windows/Fonts/malgun.ttf"
+SYSTEM_FONT_PATH = "Source/NotoSansKR-Medium.ttf"
 
 # 전역 변수
 face_stable_count = 0
