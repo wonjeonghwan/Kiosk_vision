@@ -13,10 +13,12 @@ from face_detection import extract_face_embeddings, track_target_face, find_best
 from PIL import Image as PILImage, ImageDraw, ImageFont
 import sqlite3
 import time
+from kivy.graphics import Color, Rectangle, RoundedRectangle
 
 
 # 윈도우 기본 한글 폰트 경로
-SYSTEM_FONT_PATH = "C:/Windows/Fonts/malgun.ttf"
+BOLD_FONT_PATH = "Source/NotoSansKR-Bold.ttf"
+LIGHT_FONT_PATH = "Source/NotoSansKR-Light.ttf"
 BACK_IMG = "Source\BG_pattern.png"
 
 # 전역 변수: 주문번호 (발급페이지 노출 시마다 1씩 증가)
@@ -39,7 +41,7 @@ class BaseScreen(Screen):
         self.lost_frame_count = 0
         self.last_tracking_time = time.time()
         
-        # 배경 이미지
+        # 배경 이미지 (가장 아래)
         self.bg_image = Image(
             source=BACK_IMG,
             fit_mode='fill',
@@ -47,6 +49,43 @@ class BaseScreen(Screen):
             pos_hint={'x': 0, 'y': 0}
         )
         self.layout.add_widget(self.bg_image)
+
+        # 로고 이미지
+        self.logo_image = Image(
+            source="Source/compose_logo.png",
+            size_hint=(0.45, 0.1),  # 로고 크기 조정
+            pos_hint={'center_x': 0.5, 'top': 0.88}  # 상단에 위치
+        )
+        self.layout.add_widget(self.logo_image)
+
+        # 캐릭터 이미지
+        self.character_image = Image(
+            source="Source/V_sample.png",
+            size_hint=(1.4, 1.4),  # 캐릭터 크기 조정
+            pos_hint={'center_x': 0.5, 'center_y': 0.35}
+        )
+        self.layout.add_widget(self.character_image)
+
+        # 반투명 오버레이 창 (가장 위)
+        self.overlay = FloatLayout(
+            size_hint=(0.95, 0.33),  # 너비 95%, 높이 33%
+            pos_hint={'center_x': 0.5, 'bottom': 0}  # 하단에 완전히 맞춤
+        )
+        
+        def update_rect(*args):
+            self.overlay.canvas.before.clear()
+            with self.overlay.canvas.before:
+                Color(0.94, 0.94, 0.94, 0.5)  # 더 투명하게 설정
+                RoundedRectangle(
+                    pos=self.overlay.pos,
+                    size=self.overlay.size,
+                    radius=[(20, 20), (20, 20), (0, 0), (0, 0)]  # 상단 모서리만 라운드
+                )
+        
+        # 크기나 위치가 변경될 때마다 RoundedRectangle 업데이트
+        self.overlay.bind(size=update_rect, pos=update_rect)
+        
+        self.layout.add_widget(self.overlay)
         self.add_widget(self.layout)
 
     def check_face_tracking(self, frame):
@@ -91,30 +130,46 @@ class WaitingScreen(BaseScreen):
         
         # 카메라 화면을 표시할 이미지 위젯
         self.camera_image = Image(
-            size_hint=(0.8, 0.4),
-            pos_hint={'center_x': 0.5, 'center_y': 0.6}
+            size_hint=(0.6, 0.2),
+            pos_hint={'center_x': 0.5, 'center_y': 0.125}
         )
         self.layout.add_widget(self.camera_image)
         
         # 인식된 사용자 이름을 표시할 라벨
         self.user_label = Label(
             text="",
-            font_name=SYSTEM_FONT_PATH,
+            font_name=BOLD_FONT_PATH,
             font_size=Window.height * 0.03,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.3}
+            pos_hint={'center_x': 0.5, 'center_y': 0.4},
+            halign='center',
+            valign='middle'
         )
         self.layout.add_widget(self.user_label)
         
-        # 안내 라벨
-        self.info_label = Label(
-            text="얼굴 인식 진행 중...\n녹색 사각형 안에서 정면을 바라봐주세요",
-            font_name=SYSTEM_FONT_PATH,
-            font_size=Window.height * 0.03,
+        # 안내 라벨 (진행 중 메시지)
+        self.info_label_bold = Label(
+            text="얼굴 인식 진행 중...",
+            font_name=BOLD_FONT_PATH,
+            font_size=Window.height * 0.032,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.15}
+            pos_hint={'center_x': 0.5, 'center_y': 0.3},
+            halign='center',
+            valign='middle'
         )
-        self.layout.add_widget(self.info_label)
+        self.layout.add_widget(self.info_label_bold)
+        
+        # 안내 라벨 (안내 메시지)
+        self.info_label_light = Label(
+            text="녹색 사각형 안에서 정면을 바라봐주세요",
+            font_name=LIGHT_FONT_PATH,
+            font_size=Window.height * 0.015,
+            color=(255, 255, 255, 1),
+            pos_hint={'center_x': 0.5, 'center_y': 0.265},
+            halign='center',
+            valign='middle'
+        )
+        self.layout.add_widget(self.info_label_light)
         
         # 얼굴 인식 관련 변수
         self.target_embedding = None
@@ -146,8 +201,8 @@ class WaitingScreen(BaseScreen):
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     frame_pil = PILImage.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                     draw = ImageDraw.Draw(frame_pil)
-                    font = ImageFont.truetype(SYSTEM_FONT_PATH, 30)
-                    draw.text((10, 30), f"인식 진행률: {progress}%", font=font, fill=(0, 255, 0))
+                    font = ImageFont.truetype(BOLD_FONT_PATH, 30)
+                    draw.text((10, 30), f"인식 진행률: {progress}%", font=font, fill=(0, 252, 0))
                     frame = cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
                 
                 if encoding is not None and progress >= 100:
@@ -159,12 +214,10 @@ class WaitingScreen(BaseScreen):
                         self.current_encoding = encoding
                         self.manager.current = "menu"
                     else:
-                        # 신규 사용자 → 이름 입력 대기
+                        # 신규 사용자 → 이름 입력 화면으로 전환
                         self.target_embedding = encoding
                         self.current_encoding = encoding
-                        self.is_waiting_for_name = True
-                        self.user_label.text = "새로운 사용자입니다\n이름을 입력하고 엔터를 눌러주세요"
-                        Window.bind(on_textinput=self._on_text_input)
+                        self.manager.current = "newuser"  # 새로운 화면으로 전환
                 
                 buf = cv2.flip(frame, 0).tobytes()
                 texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='bgr')
@@ -235,10 +288,12 @@ class MenuDecisionScreen(BaseScreen):
         
         self.label = Label(
             text="",
-            font_name=SYSTEM_FONT_PATH,
+            font_name=BOLD_FONT_PATH,
             font_size=Window.height * 0.03,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            pos_hint={'center_x': 0.5, 'center_y': 0.2},
+            halign='center',
+            valign='middle'
         )
         self.layout.add_widget(self.label)
         
@@ -280,18 +335,22 @@ class PaymentScreen(BaseScreen):
         # 결제 라벨
         self.label = Label(
             text="결제",
-            font_name=SYSTEM_FONT_PATH,
+            font_name=BOLD_FONT_PATH,
             font_size=Window.height * 0.03,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            pos_hint={'center_x': 0.5, 'center_y': 0.2},
+            halign='center',
+            valign='middle'
         )
         # 안내 라벨
         self.info = Label(
             text="(a 버튼을 눌러 진행,\n s 버튼을 누르면 대기화면으로)",
-            font_name=SYSTEM_FONT_PATH,
+            font_name=LIGHT_FONT_PATH,
             font_size=Window.height * 0.025,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.2}
+            pos_hint={'center_x': 0.5, 'center_y': 0.1},
+            halign='center',
+            valign='middle'
         )
         self.layout.add_widget(self.label)
         self.layout.add_widget(self.info)
@@ -330,18 +389,22 @@ class OrderIssuanceScreen(BaseScreen):
         # 주문번호 라벨
         self.order_label = Label(
             text="",
-            font_name=SYSTEM_FONT_PATH,
+            font_name=BOLD_FONT_PATH,
             font_size=Window.height * 0.03,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+            pos_hint={'center_x': 0.5, 'center_y': 0.2},
+            halign='center',
+            valign='middle'
         )
         # 안내 라벨
         self.info = Label(
             text="(a 버튼을 눌러 처음으로)",
-            font_name=SYSTEM_FONT_PATH,
+            font_name=LIGHT_FONT_PATH,
             font_size=Window.height * 0.025,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.2}
+            pos_hint={'center_x': 0.5, 'center_y': 0.1},
+            halign='center',
+            valign='middle'
         )
         self.layout.add_widget(self.order_label)
         self.layout.add_widget(self.info)
@@ -376,11 +439,84 @@ class OrderIssuanceScreen(BaseScreen):
 # -----------------------
 # ScreenManager 설정
 # -----------------------
+class NewUserScreen(BaseScreen):
+    """신규 사용자 등록 화면"""
+    def __init__(self, **kwargs):
+        super(NewUserScreen, self).__init__(**kwargs)
+        
+        # 인식된 사용자 이름을 표시할 라벨
+        self.user_label = Label(
+            text="안녕? 처음 왔구나\n넌 이름이 뭐야?",
+            font_name=BOLD_FONT_PATH,
+            font_size=Window.height * 0.03,
+            color=(255, 255, 255, 1),
+            pos_hint={'center_x': 0.5, 'center_y': 0.2},
+            halign='center',
+            valign='middle'
+        )
+        self.layout.add_widget(self.user_label)
+        
+        # 얼굴 인식 관련 변수
+        self.current_encoding = None
+
+    def on_enter(self):
+        """화면에 진입할 때"""
+        Window.bind(on_key_down=self._on_keyboard_down)
+        Window.bind(on_textinput=self._on_text_input)
+        # 이전 화면에서 얼굴 인식 데이터 가져오기
+        self.current_encoding = self.manager.get_screen('waiting').current_encoding
+
+    def on_leave(self):
+        """화면에서 나갈 때"""
+        Window.unbind(on_keyboard_down=self._on_keyboard_down)
+        Window.unbind(on_textinput=self._on_text_input)
+
+    def _on_text_input(self, window, text):
+        """이름 입력 처리"""
+        if text in ['\r', '\n']:
+            name = self.user_label.text.split('\n')[2] if len(self.user_label.text.split('\n')) > 2 else ""
+            if name:
+                print("이름 입력됨:", name)
+                from face_detection import save_face
+                save_face(name, self.current_encoding)
+                global recognized_user_name
+                recognized_user_name = name
+                self.manager.current = "menu"
+        else:
+            current_text = self.user_label.text.split('\n')
+            if len(current_text) > 2:
+                current_text[2] = current_text[2] + text
+            else:
+                current_text.append(text)
+            self.user_label.text = '\n'.join(current_text)
+        return True
+
+    def _on_keyboard_down(self, window, key, scancode, codepoint, modifier):
+        if key == 8:  # Backspace
+            current_text = self.user_label.text.split('\n')
+            if len(current_text) > 2 and current_text[2]:
+                current_text[2] = current_text[2][:-1]
+                self.user_label.text = '\n'.join(current_text)
+        elif key == 13:  # Enter
+            name = self.user_label.text.split('\n')[2] if len(self.user_label.text.split('\n')) > 2 else ""
+            if name:
+                print("이름 입력됨:", name)
+                from face_detection import save_face
+                save_face(name, self.current_encoding)
+                global recognized_user_name
+                recognized_user_name = name
+                self.manager.current = "menu"
+        elif key == ord('q'):
+            App.get_running_app().stop()
+            sys.exit(0)
+        return True
+
 class KioskScreenManager(ScreenManager):
     def __init__(self, **kwargs):
         super(KioskScreenManager, self).__init__(**kwargs)
         self.transition = FadeTransition()
         self.add_widget(WaitingScreen(name="waiting"))
+        self.add_widget(NewUserScreen(name="newuser"))  # 새로운 화면 추가
         self.add_widget(MenuDecisionScreen(name="menu"))
         self.add_widget(PaymentScreen(name="payment"))
         self.add_widget(OrderIssuanceScreen(name="order"))
