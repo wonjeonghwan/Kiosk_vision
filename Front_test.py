@@ -9,14 +9,14 @@ from kivy.clock import Clock
 from kivy.graphics.texture import Texture
 import cv2
 import numpy as np
-from face_detection import extract_face_embeddings, track_target_face, find_best_match, initialize_database
+from face_detection import extract_face_embeddings, track_target_face, find_best_match, initialize_database, MAX_LOST_FRAMES
 from PIL import Image as PILImage, ImageDraw, ImageFont
 import sqlite3
+import time
 
 
 # 윈도우 기본 한글 폰트 경로
 SYSTEM_FONT_PATH = "C:/Windows/Fonts/malgun.ttf"
-
 BACK_IMG = "Source\BG_pattern.png"
 
 # 전역 변수: 주문번호 (발급페이지 노출 시마다 1씩 증가)
@@ -28,11 +28,16 @@ recognized_user_name = ""
 # 전체 창 크기 설정
 Window.size = (540, 960)
 
-class WaitingScreen(Screen):
-    """대기화면: 얼굴인식 시작 전 대기 화면"""
+class BaseScreen(Screen):
+    """기본 화면 클래스 - 공통 기능 구현"""
     def __init__(self, **kwargs):
-        super(WaitingScreen, self).__init__(**kwargs)
+        super(BaseScreen, self).__init__(**kwargs)
         self.layout = FloatLayout()
+        self.camera = None
+        
+        # 얼굴 추적 관련 변수 추가
+        self.lost_frame_count = 0
+        self.last_tracking_time = time.time()
         
         # 배경 이미지
         self.bg_image = Image(
@@ -42,6 +47,47 @@ class WaitingScreen(Screen):
             pos_hint={'x': 0, 'y': 0}
         )
         self.layout.add_widget(self.bg_image)
+        self.add_widget(self.layout)
+
+    def check_face_tracking(self, frame):
+        """얼굴 추적 및 이탈 감지"""
+        try:
+            current_time = time.time()
+            if current_time - self.last_tracking_time >= 3.0:
+                face_found = track_target_face(frame, self.manager.get_screen('waiting').target_embedding)
+                if not face_found:
+                    self.lost_frame_count += 1
+                    print(f"이탈 카운트: {self.lost_frame_count}")  # 디버깅용
+                    if self.lost_frame_count >= MAX_LOST_FRAMES:
+                        print("대기화면으로 전환")  # 디버깅용
+                        self.manager.current = "waiting"
+                else:
+                    self.lost_frame_count = 0
+                self.last_tracking_time = current_time
+        except Exception as e:
+            print(f"얼굴 추적 중 오류 발생: {e}")
+
+    def start_camera(self):
+        """카메라 시작"""
+        if not self.camera:
+            self.camera = cv2.VideoCapture(0)
+            Clock.schedule_interval(self.update_camera, 1.0/30.0)
+
+    def stop_camera(self):
+        """카메라 정지"""
+        if self.camera:
+            self.camera.release()
+            self.camera = None
+            Clock.unschedule(self.update_camera)
+
+    def update_camera(self, dt):
+        """카메라 프레임 업데이트 - 자식 클래스에서 구현"""
+        pass
+
+class WaitingScreen(BaseScreen):
+    """대기화면: 얼굴인식 시작 전 대기 화면"""
+    def __init__(self, **kwargs):
+        super(WaitingScreen, self).__init__(**kwargs)
         
         # 카메라 화면을 표시할 이미지 위젯
         self.camera_image = Image(
@@ -69,10 +115,8 @@ class WaitingScreen(Screen):
             pos_hint={'center_x': 0.5, 'center_y': 0.15}
         )
         self.layout.add_widget(self.info_label)
-        self.add_widget(self.layout)
         
-        # 카메라 관련 변수
-        self.camera = None
+        # 얼굴 인식 관련 변수
         self.target_embedding = None
         self.current_encoding = None
         self.is_waiting_for_name = False
@@ -89,19 +133,6 @@ class WaitingScreen(Screen):
         """화면에서 나갈 때"""
         Window.unbind(on_keyboard_down=self._on_keyboard_down)
         self.stop_camera()
-
-    def start_camera(self):
-        """카메라 시작"""
-        if not self.camera:
-            self.camera = cv2.VideoCapture(0)
-            Clock.schedule_interval(self.update_camera, 1.0/30.0)
-
-    def stop_camera(self):
-        """카메라 정지"""
-        if self.camera:
-            self.camera.release()
-            self.camera = None
-            Clock.unschedule(self.update_camera)
 
     def update_camera(self, dt):
         if self.camera and not self.is_waiting_for_name:
@@ -197,63 +228,38 @@ class WaitingScreen(Screen):
         return True
 
 
-class MenuDecisionScreen(Screen):
+class MenuDecisionScreen(BaseScreen):
     """메뉴 결정 페이지"""
     def __init__(self, **kwargs):
         super(MenuDecisionScreen, self).__init__(**kwargs)
-        self.layout = FloatLayout()
-
-                # 배경 이미지
-        self.bg_image = Image(
-            source=BACK_IMG,
-            fit_mode='fill',
-            size_hint=(1, 1),
-            pos_hint={'x': 0, 'y': 0}
-        )
-        self.layout.add_widget(self.bg_image)
-
+        
         self.label = Label(
-            text="메뉴 결정 페이지\n(a 버튼을 눌러 진행)\n(s 버튼을 누르면 대기화면으로)",
+            text="",
             font_name=SYSTEM_FONT_PATH,
             font_size=Window.height * 0.03,
-            color=(1, 1, 1, 1),
+            color=(255, 255, 255, 1),
             pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
         self.layout.add_widget(self.label)
-        self.add_widget(self.layout)
         
-        # 카메라 관련 변수
-        self.camera = None
         self.last_check_time = 0
 
     def on_enter(self):
         global recognized_user_name
         self.label.text = f"메뉴 결정 페이지\n인식된 사용자: {recognized_user_name}\n(a 버튼을 눌러 진행)\n(s 버튼을 누르면 대기화면으로)"
-        Window.bind(on_key_down=self._on_keyboard_down)  # 수정: on_textinput -> on_key_down
+        Window.bind(on_key_down=self._on_keyboard_down)
         self.start_camera()
 
     def on_leave(self):
-        Window.unbind(on_key_down=self._on_keyboard_down)  # 수정: on_textinput -> on_key_down
+        Window.unbind(on_key_down=self._on_keyboard_down)
         self.stop_camera()
 
-    def start_camera(self):
-        if not self.camera:
-            self.camera = cv2.VideoCapture(0)
-            Clock.schedule_interval(self.check_user_presence, 1.0)
-
-    def stop_camera(self):
-        if self.camera:
-            self.camera.release()
-            self.camera = None
-            Clock.unschedule(self.check_user_presence)
-
-    def check_user_presence(self, dt):
+    def update_camera(self, dt):
+        """카메라 프레임 업데이트 - 얼굴 추적"""
         if self.camera:
             ret, frame = self.camera.read()
             if ret:
-                face_found = track_target_face(frame, self.manager.get_screen('waiting').target_embedding)
-                if not face_found:
-                    self.manager.current = "waiting"
+                self.check_face_tracking(frame)
 
     def _on_keyboard_down(self, window, key, scancode, codepoint, modifier):
         if key == ord('a'):
@@ -266,17 +272,17 @@ class MenuDecisionScreen(Screen):
             sys.exit(0)
         return True
 
-class PaymentScreen(Screen):
+class PaymentScreen(BaseScreen):
+    """결제 페이지"""
     def __init__(self, **kwargs):
         super(PaymentScreen, self).__init__(**kwargs)
-        self.camera = None  # 카메라 초기화 추가
-        self.layout = FloatLayout()
+        
         # 결제 라벨
         self.label = Label(
             text="결제",
             font_name=SYSTEM_FONT_PATH,
             font_size=Window.height * 0.03,
-            color=(1, 0, 0, 1),
+            color=(255, 255, 255, 1),
             pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
         # 안내 라벨
@@ -284,40 +290,26 @@ class PaymentScreen(Screen):
             text="(a 버튼을 눌러 진행,\n s 버튼을 누르면 대기화면으로)",
             font_name=SYSTEM_FONT_PATH,
             font_size=Window.height * 0.025,
-            color=(1, 1, 1, 1),
+            color=(255, 255, 255, 1),
             pos_hint={'center_x': 0.5, 'center_y': 0.2}
         )
         self.layout.add_widget(self.label)
         self.layout.add_widget(self.info)
-        self.add_widget(self.layout)
-
 
     def on_enter(self):
-        Window.bind(on_key_down=self._on_keyboard_down)  # 수정: on_textinput -> on_key_down
+        Window.bind(on_key_down=self._on_keyboard_down)
         self.start_camera()
 
     def on_leave(self):
-        Window.unbind(on_key_down=self._on_keyboard_down)  # 수정: on_textinput -> on_key_down
+        Window.unbind(on_key_down=self._on_keyboard_down)
         self.stop_camera()
 
-    def start_camera(self):
-        if not self.camera:
-            self.camera = cv2.VideoCapture(0)
-            Clock.schedule_interval(self.check_user_presence, 1.0)
-
-    def stop_camera(self):
-        if self.camera:
-            self.camera.release()
-            self.camera = None
-            Clock.unschedule(self.check_user_presence)
-
-    def check_user_presence(self, dt):
+    def update_camera(self, dt):
+        """카메라 프레임 업데이트 - 얼굴 추적"""
         if self.camera:
             ret, frame = self.camera.read()
             if ret:
-                face_found = track_target_face(frame, self.manager.get_screen('waiting').target_embedding)
-                if not face_found:
-                    self.manager.current = "waiting"
+                self.check_face_tracking(frame)
 
     def _on_keyboard_down(self, window, key, scancode, codepoint, modifier):
         if key == ord('a'):
@@ -330,17 +322,17 @@ class PaymentScreen(Screen):
             sys.exit(0)
         return True
 
-class OrderIssuanceScreen(Screen):
+class OrderIssuanceScreen(BaseScreen):
+    """주문 발급 페이지"""
     def __init__(self, **kwargs):
         super(OrderIssuanceScreen, self).__init__(**kwargs)
-        self.camera = None  # 카메라 초기화 추가
-        self.layout = FloatLayout()
+        
         # 주문번호 라벨
         self.order_label = Label(
             text="",
             font_name=SYSTEM_FONT_PATH,
             font_size=Window.height * 0.03,
-            color=(0, 1, 0, 1),
+            color=(255, 255, 255, 1),
             pos_hint={'center_x': 0.5, 'center_y': 0.5}
         )
         # 안내 라벨
@@ -348,43 +340,29 @@ class OrderIssuanceScreen(Screen):
             text="(a 버튼을 눌러 처음으로)",
             font_name=SYSTEM_FONT_PATH,
             font_size=Window.height * 0.025,
-            color=(1, 1, 1, 1),
+            color=(255, 255, 255, 1),
             pos_hint={'center_x': 0.5, 'center_y': 0.2}
         )
         self.layout.add_widget(self.order_label)
         self.layout.add_widget(self.info)
-        self.add_widget(self.layout)
-
 
     def on_enter(self):
         global order_number
         order_number += 1
         self.order_label.text = f"주문번호: {order_number}"
-        Window.bind(on_key_down=self._on_keyboard_down)  # 수정: on_textinput -> on_key_down
+        Window.bind(on_key_down=self._on_keyboard_down)
         self.start_camera()
 
     def on_leave(self):
-        Window.unbind(on_key_down=self._on_keyboard_down)  # 수정: on_textinput -> on_key_down
+        Window.unbind(on_key_down=self._on_keyboard_down)
         self.stop_camera()
 
-    def start_camera(self):
-        if not self.camera:
-            self.camera = cv2.VideoCapture(0)
-            Clock.schedule_interval(self.check_user_presence, 1.0)
-
-    def stop_camera(self):
-        if self.camera:
-            self.camera.release()
-            self.camera = None
-            Clock.unschedule(self.check_user_presence)
-
-    def check_user_presence(self, dt):
+    def update_camera(self, dt):
+        """카메라 프레임 업데이트 - 얼굴 추적"""
         if self.camera:
             ret, frame = self.camera.read()
             if ret:
-                face_found = track_target_face(frame, self.manager.get_screen('waiting').target_embedding)
-                if not face_found:
-                    self.manager.current = "waiting"
+                self.check_face_tracking(frame)
 
     def _on_keyboard_down(self, window, key, scancode, codepoint, modifier):
         if key == ord('a'):

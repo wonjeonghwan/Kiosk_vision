@@ -11,14 +11,12 @@ import time
 # 설정값
 SIMILARITY_THRESHOLD = 0.45
 REQUIRED_FRAMES = 7
-DISAPPEAR_FRAMES = 90
-MAX_LOST_FRAMES = 100
+MAX_LOST_FRAMES = 2
 THRESHOLD = 0.8
 TRACKER_MAX_AGE = 90
 DELETE_TIMEOUT = 300
-FONT_PATH = "malgun.ttf"
 DB_PATH = "Comfile_Coffee_DB.db"
-SYSTEM_FONT_PATH = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+SYSTEM_FONT_PATH = "C:/Windows/Fonts/malgun.ttf"
 
 # 전역 변수
 face_stable_count = 0
