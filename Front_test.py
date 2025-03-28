@@ -2,6 +2,7 @@ import sys
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.core.window import Window
@@ -588,8 +589,23 @@ class CartItemWidget(BoxLayout):
         self.delete_callback = delete_callback
         
         # 이미지
-        self.image = Image(source=cart_item["image"], size_hint=(0.15, 1))
-        self.add_widget(self.image)
+        # 이미지: AnchorLayout 컨테이너를 사용하여 셀 크기는 유지하고, 이미지 크기와 위치를 미세 조정
+        self.image_container = AnchorLayout(
+            size_hint=(0.15, 1),
+            anchor_x='center',   # 원하는 정렬('left', 'center', 'right' 등)
+            anchor_y='center',   # 원하는 정렬('bottom', 'center', 'top' 등)
+            padding=(10, 5, 10, 5)  # (left, top, right, bottom) 순서로 여백 조절
+        )
+        self.image = Image(
+            source=cart_item["image"],
+            size_hint=(None, None),
+            size=(145, 145),       # 원하는 이미지 크기로 조정
+            allow_stretch=True,
+            keep_ratio=True
+        )
+        self.image_container.add_widget(self.image)
+        self.add_widget(self.image_container)
+
         
         # 상품명
         self.item_label = Label(
@@ -732,7 +748,7 @@ class OrderIssuanceScreen(BaseScreen):
         self.order_label = Label(
             text="",
             font_name=BOLD_FONT_PATH,
-            font_size=Window.height * 0.03,
+            font_size=Window.height * 0.09,
             color=(255, 255, 255, 1),
             pos_hint={'center_x': 0.5, 'center_y': 0.2},
             halign='center',
