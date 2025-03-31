@@ -48,15 +48,15 @@ def initialize_database():
 def check_face_quality(face_img):
     """얼굴 이미지의 품질을 검사"""
     laplacian_var = cv2.Laplacian(face_img, cv2.CV_64F).var()
-    if laplacian_var < 100:
+    if laplacian_var < 80:
         return False
         
     brightness = np.mean(face_img)
-    if brightness < 40 or brightness > 250:
+    if brightness < 20 or brightness > 300:
         return False
         
     contrast = np.std(face_img)
-    if contrast < 20:
+    if contrast < 10:
         return False
         
     return True

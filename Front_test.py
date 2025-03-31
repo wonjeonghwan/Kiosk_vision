@@ -59,7 +59,6 @@ class OrderData:
             ]
 
 # ----- 둥근 모서리 버튼 클래스 -----
-# ----- 둥근 모서리 버튼 클래스 -----
 class RoundedButton(Button):
     def __init__(self, **kwargs):
         super(RoundedButton, self).__init__(**kwargs)
@@ -319,21 +318,278 @@ class WaitingScreen(BaseScreen):
             sys.exit(0)
         return True
 
+# ----- 터치 키보드 위젯 -----
+class TouchKeyboard(BoxLayout):
+    def __init__(self, callback, **kwargs):
+        super(TouchKeyboard, self).__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.spacing = 0  # 행 간격을 0으로 설정
+        self.padding = 1  # 패딩 유지
+        self.callback = callback
+        
+        # 초성, 중성, 종성 상태 변수 추가
+        self.cho = ''  # 초성
+        self.jung = ''  # 중성
+        self.jong = ''  # 종성
+        self.shift_mode = False  # shift 모드 상태
+        
+        # 일반 키와 shift 키 매핑
+        self.key_mapping = {
+            'ㄱ': 'ㄲ', 'ㄷ': 'ㄸ', 'ㅂ': 'ㅃ', 'ㅅ': 'ㅆ', 'ㅈ': 'ㅉ',
+            'ㅐ': 'ㅒ', 'ㅔ': 'ㅖ'
+        }
+        
+        # 키보드 레이아웃 정의 (shift 버튼 추가)
+        self.normal_keys = [
+            ['ㅂ', 'ㅈ', 'ㄷ', 'ㄱ', 'ㅅ', 'ㅛ', 'ㅕ', 'ㅑ', 'ㅐ', 'ㅔ'],
+            ['ㅁ', 'ㄴ', 'ㅇ', 'ㄹ', 'ㅎ', 'ㅗ', 'ㅓ', 'ㅏ', 'ㅣ'],
+            ['ㅋ', 'ㅌ', 'ㅊ', 'ㅍ', 'ㅠ', 'ㅜ', 'ㅡ']
+        ]
+        
+        self.shift_keys = [
+            ['ㅃ', 'ㅉ', 'ㄸ', 'ㄲ', 'ㅆ', 'ㅛ', 'ㅕ', 'ㅑ', 'ㅒ', 'ㅖ'],
+            ['ㅁ', 'ㄴ', 'ㅇ', 'ㄹ', 'ㅎ', 'ㅗ', 'ㅓ', 'ㅏ', 'ㅣ'],
+            ['ㅋ', 'ㅌ', 'ㅊ', 'ㅍ', 'ㅠ', 'ㅜ', 'ㅡ']
+        ]
+        
+        # 키보드 생성
+        self.key_buttons = []  # 버튼 참조 저장용
+        
+        # 자음/모음 키 행 생성
+        for row_keys in self.normal_keys:
+            row_layout = BoxLayout(spacing=1)  # 간격 줄임
+            row_buttons = []
+            for key in row_keys:
+                btn = RoundedButton(
+                    text=key,
+                    size_hint=(0.08, 0.8),
+                    font_size=16,
+                    font_name=BOLD_FONT_PATH
+                )
+                btn.bind(on_release=lambda x, k=key: self.on_key_press(k))
+                row_layout.add_widget(btn)
+                row_buttons.append(btn)
+            self.key_buttons.append(row_buttons)
+            self.add_widget(row_layout)
+        
+        # 특수 키 행 생성
+        special_row = BoxLayout(spacing=1)  # 간격 줄임
+        
+        shift_btn = RoundedButton(
+            text='shift',
+            size_hint=(0.15, 0.8),
+            font_size=16,
+            font_name=BOLD_FONT_PATH,
+            background_color=(200/255.0, 200/255.0, 200/255.0, 0.85)
+        )
+        shift_btn.bind(on_release=lambda x: self.toggle_shift_mode())
+        special_row.add_widget(shift_btn)
+        
+        space_btn = RoundedButton(
+            text='스페이스',
+            size_hint=(0.3, 0.8),
+            font_size=16,
+            font_name=BOLD_FONT_PATH
+        )
+        space_btn.bind(on_release=lambda x: self.on_key_press('스페이스'))
+        special_row.add_widget(space_btn)
+        
+        backspace_btn = RoundedButton(
+            text='←',
+            size_hint=(0.15, 0.8),
+            font_size=16,
+            font_name=BOLD_FONT_PATH
+        )
+        backspace_btn.bind(on_release=lambda x: self.on_key_press('백스페이스'))
+        special_row.add_widget(backspace_btn)
+        
+        enter_btn = RoundedButton(
+            text='엔터',
+            size_hint=(0.15, 0.8),
+            font_size=16,
+            font_name=BOLD_FONT_PATH
+        )
+        enter_btn.bind(on_release=lambda x: self.on_key_press('엔터'))
+        special_row.add_widget(enter_btn)
+        
+        self.add_widget(special_row)
+        self.shift_btn = shift_btn
+
+    def toggle_shift_mode(self):
+        self.shift_mode = not self.shift_mode
+        # shift 버튼 배경색 변경
+        self.shift_btn.background_color = (252/255.0, 208/255.0, 41/255.0, 0.85) if self.shift_mode else (200/255.0, 200/255.0, 200/255.0, 0.85)
+        
+        # 버튼 텍스트 변경
+        for row_idx, row_buttons in enumerate(self.key_buttons):
+            for btn_idx, btn in enumerate(row_buttons):
+                btn.text = self.shift_keys[row_idx][btn_idx] if self.shift_mode else self.normal_keys[row_idx][btn_idx]
+
+    def on_key_press(self, key):
+        # shift 모드에서 키가 눌렸을 때 해당하는 쌍자음/쌍모음으로 변환
+        if self.shift_mode and key in self.key_mapping:
+            key = self.key_mapping[key]
+            self.shift_mode = False  # 자동으로 shift 모드 해제
+            self.toggle_shift_mode()  # 버튼 텍스트 원래대로 복원
+            
+        if key == '스페이스':
+            # 현재 조합 중인 글자가 있다면 먼저 완성
+            if self.cho or self.jung or self.jong:
+                combined = self.combine_jamo()
+                if combined:
+                    self.callback(combined)
+                self.cho = self.jung = self.jong = ''
+            self.callback(' ')
+            
+        elif key == '백스페이스':
+            # 현재 조합 중인 글자가 있다면 마지막 자모음만 삭제
+            if self.jong:
+                self.jong = ''
+                combined = self.combine_jamo()
+                if combined:
+                    self.callback('backspace')
+                    self.callback(combined)
+            elif self.jung:
+                self.jung = ''
+                if self.cho:  # 초성만 남은 경우
+                    self.callback('backspace')
+                    self.callback(self.cho)
+            elif self.cho:
+                self.cho = ''
+                self.callback('backspace')
+            else:
+                self.callback('backspace')
+                
+        elif key == '엔터':
+            # 현재 조합 중인 글자가 있다면 먼저 완성
+            if self.cho or self.jung or self.jong:
+                combined = self.combine_jamo()
+                if combined:
+                    self.callback(combined)
+                self.cho = self.jung = self.jong = ''
+            self.callback('enter')
+            
+        else:
+            # 자모음 분류
+            CONSONANTS = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+            VOWELS = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ']
+            
+            if key in CONSONANTS:
+                if not self.cho:  # 초성이 없으면 초성으로
+                    self.cho = key
+                    self.callback(key)
+                elif not self.jung:  # 중성이 없는데 자음이 들어오면 이전 글자 완성하고 새로 시작
+                    self.callback('backspace')
+                    self.cho = key
+                    self.callback(key)
+                elif not self.jong:  # 종성이 없으면 종성으로
+                    self.jong = key
+                    combined = self.combine_jamo()
+                    if combined:
+                        self.callback('backspace')
+                        self.callback(combined)
+                else:  # 모든 자리가 찼으면 이전 글자 완성하고 새로 시작
+                    combined = self.combine_jamo()
+                    if combined:
+                        self.callback('backspace')
+                        self.callback(combined)
+                    self.cho = key
+                    self.jung = self.jong = ''
+                    self.callback(key)
+                    
+            elif key in VOWELS:
+                if not self.cho:  # 초성이 없는 모음
+                    self.callback(key)
+                elif not self.jung:  # 중성이 없으면 중성으로
+                    self.jung = key
+                    combined = self.combine_jamo()
+                    if combined:
+                        self.callback('backspace')
+                        self.callback(combined)
+                else:  # 중성이 있으면 이전 글자 완성하고 새로 시작
+                    combined = self.combine_jamo()
+                    if combined:
+                        self.callback('backspace')
+                        self.callback(combined)
+                    self.cho = ''
+                    self.jung = key
+                    self.jong = ''
+                    self.callback(key)
+
+    def combine_jamo(self):
+        if not self.cho or not self.jung:  # 초성과 중성이 모두 있어야 조합 가능
+            return None
+            
+        CHO = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+        JUNG = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ']
+        JONG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+
+        try:
+            cho_idx = CHO.index(self.cho)
+            jung_idx = JUNG.index(self.jung)
+            jong_idx = JONG.index(self.jong) if self.jong else 0
+
+            # 유니코드 조합
+            unicode_value = 0xAC00 + cho_idx * 21 * 28 + jung_idx * 28 + jong_idx
+            return chr(unicode_value)
+        except ValueError:
+            return None
+
 # 신규 사용자 등록 화면
 class NewUserScreen(BaseScreen):
     def __init__(self, **kwargs):
         super(NewUserScreen, self).__init__(**kwargs)
+        
+        # 이름 입력 라벨
         self.user_label = Label(
             text="안녕? 처음 왔구나\n넌 이름이 뭐야?",
             font_name=BOLD_FONT_PATH,
             font_size=Window.height * 0.03,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.2},
+            pos_hint={'center_x': 0.5, 'center_y': 0.3},
             halign='center',
             valign='middle'
         )
         self.layout.add_widget(self.user_label)
+        
+        # 입력된 이름 표시 라벨
+        self.name_label = Label(
+            text="",
+            font_name=BOLD_FONT_PATH,
+            font_size=Window.height * 0.04,
+            color=(255, 255, 255, 1),
+            pos_hint={'center_x': 0.5, 'center_y': 0.25},
+            halign='center',
+            valign='middle'
+        )
+        self.layout.add_widget(self.name_label)
+        
+        # 터치 키보드 추가 (크기 조정)
+        self.keyboard = TouchKeyboard(
+            callback=self.on_keyboard_input,
+            size_hint=(0.8, 0.25),  # 크기를 80% 너비, 25% 높이로 조정
+            pos_hint={'center_x': 0.5, 'bottom': 0.05}
+        )
+        self.layout.add_widget(self.keyboard)
+        
         self.current_encoding = None
+
+    def on_keyboard_input(self, key):
+        if key == 'backspace':
+            self.name_label.text = self.name_label.text[:-1]
+        elif key == 'enter':
+            name = self.name_label.text
+            if name:
+                print("이름 입력됨:", name)
+                from face_detection import save_face
+                save_face(name, self.current_encoding)
+                global recognized_user_name
+                recognized_user_name = name
+                self.manager.current = "menu"
+        elif key == '스페이스':
+            self.name_label.text += ' '
+        else:
+            self.name_label.text += key
 
     def on_enter(self):
         Window.bind(on_key_down=self._on_keyboard_down)
@@ -346,7 +602,7 @@ class NewUserScreen(BaseScreen):
 
     def _on_text_input(self, window, text):
         if text in ['\r', '\n']:
-            name = self.user_label.text.split('\n')[2] if len(self.user_label.text.split('\n')) > 2 else ""
+            name = self.name_label.text
             if name:
                 print("이름 입력됨:", name)
                 from face_detection import save_face
@@ -355,22 +611,14 @@ class NewUserScreen(BaseScreen):
                 recognized_user_name = name
                 self.manager.current = "menu"
         else:
-            current_text = self.user_label.text.split('\n')
-            if len(current_text) > 2:
-                current_text[2] = current_text[2] + text
-            else:
-                current_text.append(text)
-            self.user_label.text = '\n'.join(current_text)
+            self.name_label.text += text
         return True
 
     def _on_keyboard_down(self, window, key, scancode, codepoint, modifier):
-        if key == 8:
-            current_text = self.user_label.text.split('\n')
-            if len(current_text) > 2 and current_text[2]:
-                current_text[2] = current_text[2][:-1]
-                self.user_label.text = '\n'.join(current_text)
-        elif key == 13:
-            name = self.user_label.text.split('\n')[2] if len(self.user_label.text.split('\n')) > 2 else ""
+        if key == 8:  # 백스페이스
+            self.name_label.text = self.name_label.text[:-1]
+        elif key == 13:  # 엔터
+            name = self.name_label.text
             if name:
                 print("이름 입력됨:", name)
                 from face_detection import save_face
@@ -425,6 +673,10 @@ class MenuDecisionScreen(BaseScreen):
             self.stop_camera()
             App.get_running_app().stop()
             sys.exit(0)
+        return True
+
+    def on_touch_down(self, touch):
+        self.manager.current = "cart"
         return True
 
 # ----- 장바구니 페이지 -----
@@ -576,6 +828,18 @@ class CartScreen(BaseScreen):
         self.cart_items = []
         self.refresh_cart_view()
 
+    def on_enter(self):
+        self.start_camera()
+
+    def on_leave(self):
+        self.stop_camera()
+
+    def update_camera(self, dt):
+        if self.camera:
+            ret, frame = self.camera.read()
+            if ret:
+                self.check_face_tracking(frame)
+
 # ----- 장바구니 항목 위젯 (이미지, 이름, 갯수, 버튼들, 가격 순서) -----
 class CartItemWidget(BoxLayout):
     def __init__(self, cart_item, index, update_callback, delete_callback, **kwargs):
@@ -694,25 +958,23 @@ class PaymentScreen(BaseScreen):
     def __init__(self, **kwargs):
         super(PaymentScreen, self).__init__(**kwargs)
         self.label = Label(
-            text="결제",
+            text="카드를 삽입하여 주십시오",
             font_name=BOLD_FONT_PATH,
-            font_size=Window.height * 0.03,
+            font_size=Window.height * 0.05,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.2},
-            halign='center',
-            valign='middle'
-        )
-        self.info = Label(
-            text="(a 버튼을 눌러 진행,\n s 버튼을 누르면 대기화면으로)",
-            font_name=LIGHT_FONT_PATH,
-            font_size=Window.height * 0.025,
-            color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.1},
+            pos_hint={'center_x': 0.5, 'center_y': 0.3},
             halign='center',
             valign='middle'
         )
         self.layout.add_widget(self.label)
-        self.layout.add_widget(self.info)
+
+        # 카드 이미지 위젯 (overlay 중앙에 위치)
+        self.card_image = Image(
+            source="Source/Card.png",
+            size_hint=(0.7, 0.7),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5}
+        )
+        self.overlay.add_widget(self.card_image)
 
     def on_enter(self):
         Window.bind(on_key_down=self._on_keyboard_down)
@@ -741,6 +1003,10 @@ class PaymentScreen(BaseScreen):
             sys.exit(0)
         return True
 
+    def on_touch_down(self, touch):
+        self.manager.current = "order"
+        return True
+
 # ----- 주문 발급 페이지 -----
 class OrderIssuanceScreen(BaseScreen):
     def __init__(self, **kwargs):
@@ -754,17 +1020,7 @@ class OrderIssuanceScreen(BaseScreen):
             halign='center',
             valign='middle'
         )
-        self.info = Label(
-            text="(a 버튼을 눌러 처음으로)",
-            font_name=LIGHT_FONT_PATH,
-            font_size=Window.height * 0.025,
-            color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.1},
-            halign='center',
-            valign='middle'
-        )
         self.layout.add_widget(self.order_label)
-        self.layout.add_widget(self.info)
 
     def on_enter(self):
         global order_number
@@ -790,6 +1046,10 @@ class OrderIssuanceScreen(BaseScreen):
             self.stop_camera()
             App.get_running_app().stop()
             sys.exit(0)
+        return True
+
+    def on_touch_down(self, touch):
+        self.manager.current = "waiting"
         return True
 
 # ----- ScreenManager 설정 -----
