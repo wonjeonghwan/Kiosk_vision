@@ -1,4 +1,7 @@
-# main.py
+"""
+얼굴 인식 클래스
+"""
+
 import cv2
 import numpy as np
 import sqlite3
@@ -15,7 +18,7 @@ MAX_LOST_FRAMES = 2
 THRESHOLD = 0.8
 TRACKER_MAX_AGE = 90
 DELETE_TIMEOUT = 300
-DB_PATH = "Comfile_Coffee_DB.db"
+DB_PATH = "kiosk.db"
 SYSTEM_FONT_PATH = "Source/NotoSansKR-Medium.ttf"
 
 # 전역 변수
@@ -132,8 +135,8 @@ def find_best_match(encoding, threshold=THRESHOLD):
         return best_match_id, best_match_name, best_similarity
     return None, None, best_similarity
 
-
 def extract_face_embeddings(frame):
+    """얼굴 임베딩 추출"""
     global face_stable_count, temporary_encodings
 
     h, w, _ = frame.shape
@@ -194,7 +197,6 @@ def extract_face_embeddings(frame):
     temporary_encodings.clear()
     return None, (x1, y1, x2, y2), 0, None
 
-
 def track_target_face(frame, target_embedding):
     """얼굴 추적"""
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -220,57 +222,38 @@ def put_text(frame, text, position):
     draw.text(position, text, font=font, fill=(0, 255, 0))
     return cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
 
-def main():
-    """메인 함수"""
-    initialize_database()
-    cap = cv2.VideoCapture(0)
-    
-    target_embedding = None
-    tracking_enabled = False
-    last_tracking_time = time.time()
-    lost_frame_count = 0
-    
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-            
-        if not tracking_enabled:
-            # 얼굴 인식 모드
-            encoding, (x1, y1, x2, y2), progress = extract_face_embeddings(frame)
-            
-            # 녹색 사각형 표시
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            
-            # 진행률 표시 (한글)
-            frame = put_text(frame, f"인식 진행률: {progress}%", (10, 30))
-            
-            if encoding is not None and progress >= 100:
-                target_embedding = encoding
-                tracking_enabled = True
-                last_tracking_time = time.time()
-        else:
-            # 얼굴 추적 모드
-            current_time = time.time()
-            if current_time - last_tracking_time >= 3.0:  # 3초마다 추적 상태 전송
-                face_found = track_target_face(frame, target_embedding)
-                if not face_found:
-                    lost_frame_count += 1
-                    if lost_frame_count > MAX_LOST_FRAMES:
-                        tracking_enabled = False
-                        target_embedding = None
-                        lost_frame_count = 0
-                else:
-                    lost_frame_count = 0
-                last_tracking_time = current_time
+def save_face_to_database(name, face_encoding):
+    """얼굴 정보를 데이터베이스에 저장"""
+    try:
+        # 얼굴 인코딩을 numpy 배열로 변환
+        face_encoding = np.array(face_encoding)
         
-        cv2.imshow('Face Recognition', frame)
+        # 데이터베이스에 저장
+        conn = sqlite3.connect('faces.db')
+        c = conn.cursor()
         
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    
-    cap.release()
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
+        # 테이블이 없으면 생성
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS faces (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                encoding BLOB NOT NULL
+            )
+        ''')
+        
+        # 새로운 ID 생성
+        c.execute('SELECT MAX(id) FROM faces')
+        max_id = c.fetchone()[0]
+        new_id = 1 if max_id is None else max_id + 1
+        
+        # 얼굴 정보 저장
+        c.execute('INSERT INTO faces (id, name, encoding) VALUES (?, ?, ?)',
+                 (new_id, name, face_encoding.tobytes()))
+        
+        conn.commit()
+        conn.close()
+        print(f"얼굴 정보 저장 완료: ID={new_id}, NAME={name}")
+    except Exception as e:
+        print(f"얼굴 정보 저장 중 오류 발생: {e}")
+        import traceback
+        print(traceback.format_exc()) 
