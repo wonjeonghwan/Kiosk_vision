@@ -1,0 +1,35 @@
+# 기본 라이브러리
+numpy==1.24.4
+pillow==9.5.0
+scipy==1.10.1
+
+# OpenCV
+opencv-python==4.7.0.72
+
+# YOLO (Ultralytics)
+ultralytics==8.0.20
+
+# 얼굴 인식
+cmake
+dlib
+face-recognition==1.3.0
+
+# 실시간 객체 추적
+deep-sort-realtime
+
+# Whisper (STT)
+openai-whisper
+sounddevice
+ffmpeg-python
+
+# PyTorch (CUDA 11.8 기준, 필요시 수동 설치)
+torch
+torchaudio
+torchvision
+
+# Kivy
+kivy==2.2.1
+kivy_deps.angle
+kivy_deps.glew
+kivy_deps.sdl2
+kivy_deps.gstreamer
