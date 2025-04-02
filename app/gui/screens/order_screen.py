@@ -29,6 +29,7 @@ import sqlite3
 import time
 from pydub import AudioSegment
 from pydub.playback import play
+from app.core.tts import TTSManager
 
 class OrderScreen(BaseScreen):
     def __init__(self, **kwargs):
@@ -417,6 +418,11 @@ class OrderScreen(BaseScreen):
             self.chat_scroll.scroll_y = 0
             # 스크롤 위치 고정
             self.chat_scroll.do_scroll_y = False
+            
+            # TTS로 LLM 응답 재생
+            tts_manager = TTSManager()
+            tts_manager.play_async(response)
+            
             print("✅ UI 업데이트 완료")
         except Exception as e:
             print(f"❌ UI 업데이트 중 오류: {str(e)}")
