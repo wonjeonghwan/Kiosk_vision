@@ -18,8 +18,8 @@ MAX_LOST_FRAMES = 2
 THRESHOLD = 0.8
 TRACKER_MAX_AGE = 90
 DELETE_TIMEOUT = 300
-DB_PATH = "kiosk.db"
-SYSTEM_FONT_PATH = "Source/NotoSansKR-Medium.ttf"
+DB_PATH = "data\Comfile_Coffee_DB.db"
+SYSTEM_FONT_PATH = "app/assets/fonts/NotoSansKR-Medium.ttf"
 
 # 전역 변수
 face_stable_count = 0
@@ -106,7 +106,9 @@ def find_best_match(encoding, threshold=THRESHOLD):
 
     for row in rows:
         try:
-            stored_encoding = pickle.loads(row[2])
+            # 바이트 데이터를 numpy 배열로 변환
+            stored_encoding = np.frombuffer(row[2], dtype=np.float64)
+            
             # Metric 1: 전체 인코딩 코사인 유사도
             norm_stored = stored_encoding / np.linalg.norm(stored_encoding)
             cos_sim = np.dot(norm_input, norm_stored)
@@ -220,40 +222,4 @@ def put_text(frame, text, position):
     draw = ImageDraw.Draw(frame_pil)
     font = ImageFont.truetype(SYSTEM_FONT_PATH, 30)
     draw.text(position, text, font=font, fill=(0, 255, 0))
-    return cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR)
-
-def save_face_to_database(name, face_encoding):
-    """얼굴 정보를 데이터베이스에 저장"""
-    try:
-        # 얼굴 인코딩을 numpy 배열로 변환
-        face_encoding = np.array(face_encoding)
-        
-        # 데이터베이스에 저장
-        conn = sqlite3.connect('faces.db')
-        c = conn.cursor()
-        
-        # 테이블이 없으면 생성
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS faces (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                encoding BLOB NOT NULL
-            )
-        ''')
-        
-        # 새로운 ID 생성
-        c.execute('SELECT MAX(id) FROM faces')
-        max_id = c.fetchone()[0]
-        new_id = 1 if max_id is None else max_id + 1
-        
-        # 얼굴 정보 저장
-        c.execute('INSERT INTO faces (id, name, encoding) VALUES (?, ?, ?)',
-                 (new_id, name, face_encoding.tobytes()))
-        
-        conn.commit()
-        conn.close()
-        print(f"얼굴 정보 저장 완료: ID={new_id}, NAME={name}")
-    except Exception as e:
-        print(f"얼굴 정보 저장 중 오류 발생: {e}")
-        import traceback
-        print(traceback.format_exc()) 
+    return cv2.cvtColor(np.array(frame_pil), cv2.COLOR_RGB2BGR) 

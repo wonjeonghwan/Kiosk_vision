@@ -2,6 +2,10 @@
 새로운 사용자 등록 화면
 """
 
+import cv2
+import numpy as np
+import time
+from PIL import Image as PILImage, ImageDraw, ImageFont
 from kivy.uix.screenmanager import Screen
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
@@ -12,8 +16,11 @@ from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle
 from kivy.uix.floatlayout import FloatLayout
 from kivy.graphics import RoundedRectangle
+from kivy.clock import Clock
+from kivy.graphics.texture import Texture
 from app.config import BOLD_FONT_PATH, LIGHT_FONT_PATH, BACK_IMG, LOGO_IMG, CHARACTER_IMG
 from app.gui.widgets.touch_keyboard import TouchKeyboard
+from app.core.face_detection import track_target_face, MAX_LOST_FRAMES
 from .base_screen import BaseScreen
 
 class NewUserScreen(BaseScreen):
@@ -24,7 +31,10 @@ class NewUserScreen(BaseScreen):
         self.next_screen = "order"
         
         # 메인 레이아웃
-        self.layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+        self.layout = FloatLayout()
+        self.camera = None
+        self.lost_frame_count = 0
+        self.last_tracking_time = time.time()
         
         # 배경 이미지
         self.bg_image = Image(
@@ -110,19 +120,9 @@ class NewUserScreen(BaseScreen):
         
         # 터치 키보드
         self.keyboard = TouchKeyboard(self.on_keyboard_input)
+        self.keyboard.size_hint = (0.8, 0.15)  # 키보드 크기 조정
+        self.keyboard.pos_hint = {'center_x': 0.5, 'center_y': 0.15}  # 위치 조정
         self.layout.add_widget(self.keyboard)
-        
-        # 확인 버튼
-        self.confirm_button = Button(
-            text='확인',
-            font_name=BOLD_FONT_PATH,
-            font_size=20,
-            size_hint=(None, None),
-            size=(200, 50),
-            pos_hint={'center_x': 0.5, 'center_y': 0.2}
-        )
-        self.confirm_button.bind(on_press=self.on_confirm)
-        self.layout.add_widget(self.confirm_button)
         
         self.add_widget(self.layout)
     
@@ -146,5 +146,5 @@ class NewUserScreen(BaseScreen):
         waiting_screen = self.manager.get_screen('waiting')
         if waiting_screen:
             waiting_screen.save_face(name)
-            # waiting 화면으로 전환
-            self.manager.current = 'waiting' 
+            # order 화면으로 전환
+            self.manager.current = 'order' 

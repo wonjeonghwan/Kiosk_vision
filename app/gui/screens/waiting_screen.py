@@ -15,7 +15,7 @@ from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
 from app.config import BOLD_FONT_PATH, LIGHT_FONT_PATH, BACK_IMG, LOGO_IMG, CHARACTER_IMG
-from app.core.face_detection import extract_face_embeddings, track_target_face, find_best_match, initialize_database, MAX_LOST_FRAMES, save_face_to_database
+from app.core.face_detection import extract_face_embeddings, track_target_face, find_best_match, initialize_database, MAX_LOST_FRAMES, save_face
 from .base_screen import BaseScreen
 
 # 설정값
@@ -206,7 +206,7 @@ class WaitingScreen(BaseScreen):
         """얼굴 정보 저장"""
         if self.current_encoding is not None:
             # 얼굴 정보를 데이터베이스에 저장
-            save_face_to_database(name, self.current_encoding)
+            save_face(name, self.current_encoding)
             # waiting 화면으로 돌아가기
             self.manager.current = 'waiting'
         else:
