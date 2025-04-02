@@ -1,0 +1,41 @@
+[[1;32mINFO[0m   ] [Logger      ] Record log in C:\Users\user\.kivy\logs\kivy_25-04-02_14.txt
+[[1;32mINFO[0m   ] [deps        ] Successfully imported "kivy_deps.angle" 0.4.0
+[[1;32mINFO[0m   ] [deps        ] Successfully imported "kivy_deps.glew" 0.3.1
+[[1;32mINFO[0m   ] [deps        ] Successfully imported "kivy_deps.sdl2" 0.8.0
+[[1;32mINFO[0m   ] [Kivy        ] v2.3.1
+[[1;32mINFO[0m   ] [Kivy        ] Installed at "C:\Users\user\miniconda3\envs\kiosk_front\lib\site-packages\kivy\__init__.py"
+[[1;32mINFO[0m   ] [Python      ] v3.9.21 (main, Dec 11 2024, 16:35:24) [MSC v.1929 64 bit (AMD64)]
+[[1;32mINFO[0m   ] [Python      ] Interpreter at "C:\Users\user\miniconda3\envs\kiosk_front\python.exe"
+[[1;32mINFO[0m   ] [Logger      ] Purge log fired. Processing...
+[[1;32mINFO[0m   ] [Logger      ] Purge finished!
+[[1;32mINFO[0m   ] [Factory     ] 195 symbols loaded
+[[1;32mINFO[0m   ] [Image       ] Providers: img_tex, img_dds, img_sdl2, img_pil (img_ffpyplayer ignored)
+[[1;32mINFO[0m   ] [Text        ] Provider: sdl2
+[[1;32mINFO[0m   ] [Window      ] Provider: sdl2
+[[1;32mINFO[0m   ] [GL          ] Using the "OpenGL" graphics system
+[[1;32mINFO[0m   ] [GL          ] GLEW initialization succeeded
+[[1;32mINFO[0m   ] [GL          ] Backend used <glew>
+[[1;32mINFO[0m   ] [GL          ] OpenGL version <b'4.6.0 - Build 31.0.101.5333'>
+[[1;32mINFO[0m   ] [GL          ] OpenGL vendor <b'Intel'>
+[[1;32mINFO[0m   ] [GL          ] OpenGL renderer <b'Intel(R) Arc(TM) Graphics'>
+[[1;32mINFO[0m   ] [GL          ] OpenGL parsed version: 4, 6
+[[1;32mINFO[0m   ] [GL          ] Shading version <b'4.60 - Build 31.0.101.5333'>
+[[1;32mINFO[0m   ] [GL          ] Texture max size <16384>
+[[1;32mINFO[0m   ] [GL          ] Texture max units <32>
+[[1;32mINFO[0m   ] [Window      ] auto add sdl2 input provider
+[[1;32mINFO[0m   ] [Window      ] virtual keyboard not allowed, single mode, not docked
+Whisper �� �ε� ��...
+Whisper �� �ε� �Ϸ�
+[[1;32mINFO[0m   ] [Base        ] Start application main loop
+[[1;32mINFO[0m   ] [GL          ] NPOT texture support is available
+[[1;32mINFO[0m   ] [WindowSDL   ] Window is now on display 1
+STT 함수 진입
+마이크 녹음 시작
+녹음 완료
+Whisper 추론 중...
+ C:\Users\user\miniconda3\envs\kiosk_front\lib\site-packages\whisper\transcribe.py:126: UserWarning: FP16 is not supported on CPU; using FP32 instead
+   warnings.warn("FP16 is not supported on CPU; using FP32 instead")
+[[1;36mDEBUG[0m  ] [Starting new HTTP connection (1)] 192.168.10.70:8080
+[[1;36mDEBUG[0m  ] [http          ]//192.168.10.70:8080 "POST /chatbot/chat HTTP/1.1" 200 79
+[[1;32mINFO[0m   ] [Base        ] Leaving application in progress...
+Whisper 결과:  아이스로 어때? 얼마야?

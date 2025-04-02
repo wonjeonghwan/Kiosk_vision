@@ -6,7 +6,7 @@ import scipy.io.wavfile
 import os
 
 print("Whisper 모델 로딩 중...", flush=True)
-model = whisper.load_model("base")
+model = whisper.load_model("small")
 print("Whisper 모델 로드 완료", flush=True)
 
 def record_and_transcribe(duration=4):
