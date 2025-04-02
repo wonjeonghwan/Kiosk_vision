@@ -10,6 +10,8 @@ from app.gui.screens.new_user_screen import NewUserScreen
 from app.gui.screens.order_screen import OrderScreen
 from app.gui.screens.payment_screen import PaymentScreen
 from app.gui.screens.order_issuance_screen import OrderIssuanceScreen
+import kivy
+kivy.logger.Logger.setLevel("DEBUG")
 
 class KioskApp(App):
     def build(self):

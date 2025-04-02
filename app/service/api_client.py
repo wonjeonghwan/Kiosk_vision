@@ -39,27 +39,53 @@ def update_user(user_id:int, name: str, phone: str, face_encoding: str) -> dict:
         print(f"[register_user ERROR] {e}")
         return {"status": "error", "message": str(e)}
 
+### TODO : 세션 아이디 
+### 챗봇 세션 초기화 
+def chatbot_session_init(session_id: str) -> str : 
+    """ 챗봇 시작 전 세션 초기화 """
+    try: 
+        b64_encoding_id = base64.b64encode(session_id.tobytes()).decode("utf-8")
+        res = requests.get(f"{API_BASE}/chatbot/initialize-session?session_id={b64_encoding_id}")
+        return res.json().get("reply", "")
+    except Exception as e:
+        print(f"[chatbot_session_init ERROR] {e}")
+        return "죄송합니다. 서버 응답에 문제가 있습니다."
+
 ### 챗봇 대화
 def chatbot_reply(session_id: str, user_input: str) -> str:
     """LLM 기반 챗봇 응답"""
     try:
-        data = {"session_id": session_id, "user_input": user_input}
+        b64_encoding_id = base64.b64encode(session_id.tobytes()).decode("utf-8")
+        data = {"session_id": b64_encoding_id, "user_input": user_input}
         res = requests.post(f"{API_BASE}/chatbot/chat", json=data)
         return res.json().get("reply", "")
     except Exception as e:
         print(f"[chatbot_reply ERROR] {e}")
-        return "죄송합니다. 서버 응답에 문제가 있습니다."
+        return "죄송합니다. 다시 말씀해 주세요."
 
-
-### 메뉴 전체 불러오기
-def get_all_menus() -> list:
-    try:
-        res = requests.get(f"{API_BASE}/menu/")
-        return res.json()
+### 챗봇 세션 저장 
+def chatbot_session_save(session_id: str) -> str : 
+    """ 현재 세션의 대화 내용을 벡터 DB에 저장 """
+    try: 
+        b64_encoding_id = base64.b64encode(session_id.tobytes()).decode("utf-8")
+        data = {"session_id": b64_encoding_id}
+        res = requests.post(f"{API_BASE}/chatbot/save-session", json=data)
+        return res.json().get("reply", "")
     except Exception as e:
-        print(f"[get_all_menus ERROR] {e}")
-        return []
-
+        print(f"[chatbot_session_save ERROR] {e}")
+        return "죄송합니다. 서버 응답에 문제가 있습니다."
+    
+### 챗봇 세션(버퍼) 클리어 
+def chatbot_session_clear(session_id: str) -> str : 
+    """ 챗봇 세션 내 대화 이력 초기화 및 삭제 """
+    try: 
+        b64_encoding_id = base64.b64encode(session_id.tobytes()).decode("utf-8")
+        # data = {"session_id": b64_encoding_id}
+        res = requests.delete(f"{API_BASE}/chatbot/clear-session?session_id={b64_encoding_id}")
+        return res.json().get("reply", "")
+    except Exception as e:
+        print(f"[chatbot_session_save ERROR] {e}")
+        return "죄송합니다. 서버 응답에 문제가 있습니다."
 
 ### TTS 
 def get_tts_audio(text: str) -> bytes:
@@ -74,3 +100,12 @@ def get_tts_audio(text: str) -> bytes:
     except Exception as e:
         print(f"[get_tts_audio ERROR] {e}")
         return b""
+    
+### 메뉴 전체 불러오기
+def get_all_menus() -> list:
+    try:
+        res = requests.get(f"{API_BASE}/menu/")
+        return res.json()
+    except Exception as e:
+        print(f"[get_all_menus ERROR] {e}")
+        return []

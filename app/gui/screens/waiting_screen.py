@@ -151,12 +151,10 @@ class WaitingScreen(BaseScreen):
                 
                 # 매칭 결과가 있는 경우
                 if match_result is not None and match_result[0] is not None:
-                    #
                     print(f"기존 사용자 발견: ID:{match_result[0]}, NAME:{match_result[1]}")
                     self.target_embedding = face_encoding
                     self.manager.current = "order"
                 elif progress >= 100:
-                    #
                     print("신규 사용자 발견")
                     self.target_embedding = face_encoding
                     self.manager.current = "new_user"

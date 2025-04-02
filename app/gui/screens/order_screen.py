@@ -22,9 +22,13 @@ from app.core.dummy_data import OrderData, ChatDummy
 from app.gui.widgets import RoundedButton, CartItemWidget, DividerLine, ChatBubble
 from .base_screen import BaseScreen
 from app.core.face_detection import extract_face_embeddings, track_target_face, find_best_match, initialize_database, MAX_LOST_FRAMES
+from app.core.vad_whisper_loop import VADWhisperLoop
+from app.service.api_client import chatbot_session_init, chatbot_reply, chatbot_session_clear
 from PIL import Image as PILImage, ImageDraw, ImageFont
 import sqlite3
 import time
+from pydub import AudioSegment
+from pydub.playback import play
 
 class OrderScreen(BaseScreen):
     def __init__(self, **kwargs):
@@ -215,15 +219,27 @@ class OrderScreen(BaseScreen):
         """화면 진입 시 호출"""
         self.start_camera()
         # 스케줄러를 시작해서 3초마다 하나씩 대화 추가
-        self.chat_index = 0
-        self.chat_box.clear_widgets()
-        self.chat_event = Clock.schedule_interval(self.add_next_chat_message, 3.0)
+        # self.chat_index = 0
+        # self.chat_box.clear_widgets()
+        # self.chat_event = Clock.schedule_interval(self.add_next_chat_message, 3.0)
+        # 챗봇 세션 초기화 TODO : session_id 전역화 
+        self.session_id = self.manager.get_screen('waiting').target_embedding
+        chatbot_session_init(self.session_id)
+        # STT 시작
+        self.vad_loop = VADWhisperLoop(callback=self.handle_user_input)
+        self.vad_loop.start()
 
     def on_leave(self):
         """화면 이탈 시 호출"""
         self.stop_camera()
         if self.chat_event:
             self.chat_event.cancel()
+        ## 채팅 버퍼 클리어 
+        sesseion_id = self.manager.get_screen('waiting').target_embedding
+        chatbot_session_clear(sesseion_id)
+        # STT 종료
+        if hasattr(self, 'vad_loop'):
+            self.vad_loop.stop()
 
     def add_next_chat_message(self, dt):
         """다음 채팅 메시지 추가"""
@@ -312,3 +328,150 @@ class OrderScreen(BaseScreen):
         # 화면 전환
         self.manager.current = self.next_screen
         return True 
+    
+    # def handle_user_input(self, text):
+    #     """사용자 음성 입력 후 전체 채팅 흐름 처리"""
+    #     if not hasattr(self, "is_processing"):
+    #         self.is_processing = False
+
+    #     if self.is_processing:
+    #         print("⏳ 현재 처리 중 - 중복 호출 방지")
+    #         return
+    
+    #     try: 
+    #         print(f"🗣 사용자 입력: {text}")
+    #         self.session_id = self.manager.get_screen('waiting').target_embedding
+
+    #         self.chat_index = 0
+    #         self.chat_box.clear_widgets()
+    #         # self.chat_event = Clock.schedule_interval(self.add_next_chat_message, 3.0)
+
+    #         # (1) 사용자 말풍선 추가
+    #         user_bubble = ChatBubble("USER", text)
+    #         self.chat_box.add_widget(user_bubble)
+
+    #         # (2) LLM에 요청
+    #         reply = chatbot_reply(self.session_id, text)
+
+    #         # (3) LLM 말풍선 추가
+    #         llm_bubble = ChatBubble("LLM", reply)
+    #         self.chat_box.add_widget(llm_bubble)
+
+    #         # (4) 스크롤 맨 아래로
+    #         Animation(scroll_y=0, duration=0.3).start(self.chat_scroll)
+
+    #         # TODO : (5) 음성 재생
+    #         # audio_bytes = get_tts_audio(reply)
+    #         # if audio_bytes:
+    #         #     with open("response.wav", "wb") as f:
+    #         #         f.write(audio_bytes)
+    #         #     sound = AudioSegment.from_wav("response.wav")
+    #         #     play(sound)
+    #     except Exception as e:
+    #         import traceback
+    #         traceback.print_exc()
+    #         print("[handle_user_input ERROR]", e)
+    #     finally:
+    #         self.is_processing = False
+
+    def handle_user_input(self, text):
+        if getattr(self, "is_processing", False):
+            print("⏳ 이미 처리 중... 중복 호출 방지됨")
+            return
+
+        self.is_processing = True  # ✅ guard ON
+        print("🗣 사용자 입력:", text)
+        # 👇 UI 작업은 main thread에서
+        Clock.schedule_once(lambda dt: self._handle_user_input_main(text))
+
+    def _handle_user_input_main(self, text):
+        try:
+            print(f"🗣 사용자 입력: {text}")
+            self.session_id = self.manager.get_screen('waiting').target_embedding
+
+            self.chat_index = 0
+            self.chat_box.clear_widgets()
+
+            # (1) 사용자 말풍선 추가
+            user_bubble = ChatBubble("USER", text)
+            self.chat_box.add_widget(user_bubble)
+
+            # (2) LLM에 요청
+            reply = chatbot_reply(self.session_id, text)
+
+            # (3) LLM 말풍선 추가
+            llm_bubble = ChatBubble("LLM", reply)
+            self.chat_box.add_widget(llm_bubble)
+
+            # (4) 스크롤 맨 아래로
+            Animation(scroll_y=0, duration=0.3).start(self.chat_scroll)
+
+            # (5) 음성 재생 (선택)
+            # audio_bytes = get_tts_audio(reply)
+            # if audio_bytes:
+            #     with open("response.wav", "wb") as f:
+            #         f.write(audio_bytes)
+            #     sound = AudioSegment.from_wav("response.wav")
+            #     play(sound)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print("[handle_user_input_main ERROR]", e)
+
+        finally:
+            self.is_processing = False
+
+    # def handle_user_input(self, text):
+    #     if getattr(self, "is_processing", False):
+    #         print("⏳ 이미 처리 중입니다. 중복 호출 방지됨.")
+    #         return
+
+    #     self.is_processing = True
+    #     # Clock.schedule_once(lambda dt: self._handle_user_input_main(text))  # UI-safe 실행
+    #     # 재귀 대신 상태 머신 접근 방식 사용
+    #     self.process_state = "USER_INPUT"
+    #     self.user_text = text
+    #     Clock.schedule_once(self.process_state_machine)
+    
+    # def process_state_machine(self, dt):
+    #     try:
+    #         if self.process_state == "USER_INPUT":
+    #             # 사용자 말풍선 추가
+    #             user_bubble = ChatBubble("USER", self.user_text)
+    #             self.chat_box.add_widget(user_bubble)
+                
+    #             # 상태 변경
+    #             self.process_state = "LLM_REQUEST"
+    #             Clock.schedule_once(self.process_state_machine)
+                
+    #         elif self.process_state == "LLM_REQUEST":
+    #             # 재귀 없이 API 호출
+    #             self.reply = self.get_llm_response(self.session_id, self.user_text)
+                
+    #             # 상태 변경
+    #             self.process_state = "DISPLAY_RESPONSE"
+    #             Clock.schedule_once(self.process_state_machine)
+                
+    #         elif self.process_state == "DISPLAY_RESPONSE":
+    #             # LLM 말풍선 추가
+    #             llm_bubble = ChatBubble("LLM", self.reply)
+    #             self.chat_box.add_widget(llm_bubble)
+                
+    #             # 아래로 스크롤
+    #             Animation(scroll_y=0, duration=0.3).start(self.chat_scroll)
+                
+    #             # 상태 초기화
+    #             self.process_state = None
+    #     finally:
+    #         if self.process_state is None:
+    #             self.is_processing = False
+    
+    # def get_llm_response(self, session_id, text):
+    #     try:
+    #         chatbot_reply(self.session_id, text)
+    #     except Exception as e:
+    #         print("[handle_user_input_main ERROR]", e)
+
+    
+
