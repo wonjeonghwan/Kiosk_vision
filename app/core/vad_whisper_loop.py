@@ -96,14 +96,21 @@ class VADWhisperLoop:
             try:
                 print("🎯 STT 추론 시작")
                 audio_np = self.np.concatenate(self.audio_data, axis=0).flatten().astype(self.np.float32) / 32768.0
-                # 한국어만 인식하도록 설정
+                
+                # 한국어와 영어만 처리하도록 설정
                 result = self.model.transcribe(
                     audio_np,
                     fp16=False,
-                    language="ko",
+                    language="ko",  # 기본 언어를 한국어로 설정
                     task="transcribe",
-                    initial_prompt="이 오디오는 한국어로 된 음성입니다."
+                    # 한국어와 영어만 인식하도록 설정
+                    condition_on_previous_text=False,  # 이전 텍스트에 의존하지 않음
+                    temperature=0.0,  # 낮은 temperature로 더 정확한 인식
+                    no_speech_threshold=0.6,  # 음성이 없을 가능성이 높은 경우 무시
+                    logprob_threshold=-1.0,  # 낮은 확률의 인식 결과 무시
+                    compression_ratio_threshold=2.4,  # 압축률이 높은 경우 무시
                 )
+                
                 text = result.get("text", "").strip()
                 print(f"📝 인식된 텍스트: {text}")
                 
