@@ -22,6 +22,9 @@ from app.config import BOLD_FONT_PATH, LIGHT_FONT_PATH, BACK_IMG, LOGO_IMG, CHAR
 from app.gui.widgets.touch_keyboard import TouchKeyboard
 from app.core.face_detection import track_target_face, MAX_LOST_FRAMES
 from .base_screen import BaseScreen
+from app.core.tts import TTSManager
+import os
+from kivy.uix.scrollview import ScrollView
 
 class NewUserScreen(BaseScreen):
     def __init__(self, **kwargs):
@@ -123,8 +126,8 @@ class NewUserScreen(BaseScreen):
         """화면 진입 시 호출"""
         super(NewUserScreen, self).on_enter()
         self.start_camera()
-        # STT 시작
-        self.start_stt()
+        # TTS로 안내 메시지 재생 후 STT 시작
+        self.play_welcome_message()
 
     def on_leave(self):
         """화면 이탈 시 호출"""
@@ -132,6 +135,43 @@ class NewUserScreen(BaseScreen):
         self.stop_camera()
         # STT 종료
         self.stop_stt()
+
+    def play_welcome_message(self):
+        """TTS로 안내 메시지 재생"""
+        try:
+            # TTS 매니저 가져오기
+            tts_manager = TTSManager()
+            
+            # 안내 메시지 재생
+            # 올바른 경로로 수정
+            welcome_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "audio", "gpt_sovits_v.wav")
+            print(f"🔊 오디오 파일 경로: {welcome_path}")
+            
+            # 파일 존재 확인
+            if os.path.exists(welcome_path):
+                print(f"✅ 오디오 파일 존재: {welcome_path}")
+                # 스크롤뷰 생성 및 설정
+                scroll_view = ScrollView(
+                    do_scroll_x=False,
+                    do_scroll_y=False,
+                    size_hint=(1, 1)
+                )
+                self.add_widget(scroll_view)
+                
+                # TTS 재생
+                tts_manager.play_audio(welcome_path)
+                
+                # 3초 후에 스크롤뷰 제거 및 STT 시작
+                Clock.schedule_once(lambda dt: self.remove_widget(scroll_view), 3)
+                Clock.schedule_once(lambda dt: self.start_stt(), 3)
+            else:
+                print(f"❌ 오디오 파일 없음: {welcome_path}")
+                # 파일이 없으면 바로 STT 시작
+                self.start_stt()
+        except Exception as e:
+            print(f"❌ TTS 재생 중 오류: {str(e)}")
+            # 오류 발생 시 바로 STT 시작
+            self.start_stt()
 
     def start_stt(self):
         """STT 시작"""

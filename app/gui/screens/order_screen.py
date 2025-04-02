@@ -101,7 +101,10 @@ class OrderScreen(BaseScreen):
             pos_hint={'center_x': 0.5, 'top': 1.5},
             bar_width=6,
             bar_color=(252/255.0, 208/255.0, 41/255.0, 0.85),
-            bar_inactive_color=(252/255.0, 208/255.0, 41/255.0, 0.5)
+            bar_inactive_color=(252/255.0, 208/255.0, 41/255.0, 0.5),
+            do_scroll_x=False,
+            do_scroll_y=True,
+            scroll_type=['bars']
         )
         self.chat_box = BoxLayout(
             orientation='vertical',
@@ -251,8 +254,8 @@ class OrderScreen(BaseScreen):
             msg = self.chat_messages[self.chat_index]
             bubble = ChatBubble(msg['sender'], msg['text'])
             self.chat_box.add_widget(bubble)
-            # 스크롤 맨 아래로 이동
-            Animation(scroll_y=0, duration=0.3, t='out_quad').start(self.chat_scroll)
+            # 스크롤 맨 아래로 이동 (애니메이션 제거)
+            self.chat_scroll.scroll_y = 0
             self.chat_index += 1
         else:
             # 모든 메시지 추가 후 스케줄러 취소
@@ -412,6 +415,8 @@ class OrderScreen(BaseScreen):
             self.chat_box.add_widget(llm_bubble)
             # 스크롤 애니메이션 제거
             self.chat_scroll.scroll_y = 0
+            # 스크롤 위치 고정
+            self.chat_scroll.do_scroll_y = False
             print("✅ UI 업데이트 완료")
         except Exception as e:
             print(f"❌ UI 업데이트 중 오류: {str(e)}")
@@ -434,6 +439,8 @@ class OrderScreen(BaseScreen):
             self.chat_box.add_widget(payment_bubble)
             # 스크롤 애니메이션 제거
             self.chat_scroll.scroll_y = 0
+            # 스크롤 위치 고정
+            self.chat_scroll.do_scroll_y = False
             
         except Exception as e:
             print(f"❌ 결제 버튼 활성화 중 오류: {str(e)}")
