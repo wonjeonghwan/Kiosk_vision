@@ -84,8 +84,8 @@ class WaitingScreen(BaseScreen):
         
         # 카메라 이미지
         self.camera_image = Image(
-            size_hint=(0.4, 0.4),
-            pos_hint={'center_x': 0.5, 'center_y': 0.1}
+            size_hint=(0.45, 0.45),
+            pos_hint={'center_x': 0.5, 'center_y': 0.14}
         )
         self.layout.add_widget(self.camera_image)
         
@@ -95,7 +95,7 @@ class WaitingScreen(BaseScreen):
             font_name=BOLD_FONT_PATH,
             font_size=Window.height * 0.05,
             color=(255, 255, 255, 1),
-            pos_hint={'center_x': 0.5, 'center_y': 0.3},
+            pos_hint={'center_x': 0.5, 'center_y': 0.28},
             halign='center',
             valign='middle'
         )
@@ -193,8 +193,7 @@ class WaitingScreen(BaseScreen):
             # OpenCV 프레임을 Kivy 텍스처로 변환
             buf = cv2.flip(frame, 0).tostring()
             texture = self.camera_image.texture
-            if texture is None or texture.size != frame.shape[1::-1]:
-                texture = self.camera_image.texture = Texture.create(size=frame.shape[1::-1], colorfmt='rgb')
+            texture = self.camera_image.texture = Texture.create(size=frame.shape[1::-1], colorfmt='rgb')
             texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
             
         except Exception as e:

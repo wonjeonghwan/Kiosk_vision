@@ -83,7 +83,7 @@ class NewUserScreen(BaseScreen):
         self.title_label = Label(
             text="신규 사용자 등록",
             font_name=BOLD_FONT_PATH,
-            font_size=Window.height * 0.03,
+            font_size=Window.height * 0.045,
             color=(0, 0, 0, 1),
             pos_hint={'center_x': 0.5, 'top': 1.44},
             halign='center',
@@ -94,25 +94,14 @@ class NewUserScreen(BaseScreen):
         # 레이아웃에 오버레이 추가
         self.layout.add_widget(self.overlay)
         
-        # 이름 입력 레이블
-        self.name_label = Label(
-            text='이름을 입력해주세요',
-            font_name=BOLD_FONT_PATH,
-            font_size=24,
-            color=(1, 1, 1, 1),
-            size_hint=(None, None),
-            size=(400, 50),
-            pos_hint={'center_x': 0.5, 'center_y': 0.4}
-        )
-        self.layout.add_widget(self.name_label)
-        
         # 이름 입력 필드
         self.name_input = Label(
             text='',
-            font_name=LIGHT_FONT_PATH,
-            font_size=Window.height * 0.03,
+            font_name=BOLD_FONT_PATH,
+            font_size=Window.height * 0.06,
             color=(0, 0, 0, 1),
             size_hint=(1, 0.1),
+            pos_hint = {'center_x': 0.5, 'center_y': 0.23},
             halign='center',
             valign='middle'
         )
@@ -120,8 +109,8 @@ class NewUserScreen(BaseScreen):
         
         # 터치 키보드
         self.keyboard = TouchKeyboard(self.on_keyboard_input)
-        self.keyboard.size_hint = (0.8, 0.15)  # 키보드 크기 조정
-        self.keyboard.pos_hint = {'center_x': 0.5, 'center_y': 0.15}  # 위치 조정
+        self.keyboard.size_hint = (0.9, 0.2)  # 키보드 크기 조정
+        self.keyboard.pos_hint = {'center_x': 0.5, 'center_y': 0.1}  # 위치 조정
         self.layout.add_widget(self.keyboard)
         
         self.add_widget(self.layout)

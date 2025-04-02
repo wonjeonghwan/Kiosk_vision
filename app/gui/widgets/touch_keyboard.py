@@ -1,5 +1,5 @@
 """
-터치 키보드 위젯
+터치 키보드 위젯 (종성 분리 지원 버전)
 """
 
 from kivy.uix.boxlayout import BoxLayout
@@ -43,7 +43,7 @@ class TouchKeyboard(BoxLayout):
                 btn = RoundedButton(
                     text=key,
                     size_hint=(0.08, 0.8),
-                    font_size=16,
+                    font_size=23,
                     font_name=BOLD_FONT_PATH
                 )
                 btn.bind(on_release=lambda x, k=key: self.on_key_press(k))
@@ -96,6 +96,17 @@ class TouchKeyboard(BoxLayout):
                 btn.text = self.shift_keys[row_idx][btn_idx] if self.shift_mode else self.normal_keys[row_idx][btn_idx]
 
     def on_key_press(self, key):
+        # 모음 합성을 위한 조합 사전
+        vowel_combinations = {
+            ('ㅗ', 'ㅏ'): 'ㅘ',
+            ('ㅗ', 'ㅐ'): 'ㅙ',
+            ('ㅗ', 'ㅣ'): 'ㅚ',
+            ('ㅜ', 'ㅓ'): 'ㅝ',
+            ('ㅜ', 'ㅔ'): 'ㅞ',
+            ('ㅜ', 'ㅣ'): 'ㅟ',
+            ('ㅡ', 'ㅣ'): 'ㅢ'
+        }
+
         if self.shift_mode and key in self.key_mapping:
             key = self.key_mapping[key]
             self.shift_mode = False
@@ -133,8 +144,10 @@ class TouchKeyboard(BoxLayout):
                 self.cho = self.jung = self.jong = ''
             self.callback('enter')
         else:
-            CONSONANTS = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
-            VOWELS = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ']
+            CONSONANTS = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ',
+                          'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+            VOWELS = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ',
+                      'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ']
             if key in CONSONANTS:
                 if not self.cho:
                     self.cho = key
@@ -166,22 +179,51 @@ class TouchKeyboard(BoxLayout):
                     if combined:
                         self.callback('backspace')
                         self.callback(combined)
-                else:
+                elif self.jong:
+                    # ★ 종성이 있는 경우: 종성을 떼어내어 다음 음절의 초성으로 이동
+                    temp = self.jong
+                    self.jong = ''
+                    # 현재 음절(종성 제거된)을 확정
                     combined = self.combine_jamo()
                     if combined:
                         self.callback('backspace')
                         self.callback(combined)
-                    self.cho = ''
+                    # 새 음절 시작: 이전 종성을 초성으로, 현재 입력 모음을 중성으로 사용
+                    self.cho = temp
                     self.jung = key
                     self.jong = ''
-                    self.callback(key)
+                    new_combined = self.combine_jamo()
+                    if new_combined:
+                        self.callback(new_combined)
+                else:
+                    # 이미 중성이 존재하는 경우: 합성 가능한지 확인
+                    composite = vowel_combinations.get((self.jung, key))
+                    if composite:
+                        self.jung = composite
+                        combined = self.combine_jamo()
+                        if combined:
+                            self.callback('backspace')
+                            self.callback(combined)
+                    else:
+                        combined = self.combine_jamo()
+                        if combined:
+                            self.callback('backspace')
+                            self.callback(combined)
+                        self.cho = ''
+                        self.jung = key
+                        self.jong = ''
+                        self.callback(key)
 
     def combine_jamo(self):
         if not self.cho or not self.jung:
             return None
-        CHO = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
-        JUNG = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ']
-        JONG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+        CHO = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ',
+               'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
+        JUNG = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ',
+                'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ']
+        JONG = ['', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ',
+                'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ',
+                'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ']
         try:
             cho_idx = CHO.index(self.cho)
             jung_idx = JUNG.index(self.jung)
@@ -189,4 +231,4 @@ class TouchKeyboard(BoxLayout):
             unicode_value = 0xAC00 + cho_idx * 21 * 28 + jung_idx * 28 + jong_idx
             return chr(unicode_value)
         except ValueError:
-            return None 
+            return None
