@@ -2,6 +2,7 @@
 얼굴 인식 클래스
 """
 
+import os
 import cv2
 import numpy as np
 import sqlite3
@@ -10,6 +11,7 @@ import face_recognition
 from deep_sort_realtime.deepsort_tracker import DeepSort
 from PIL import ImageFont, ImageDraw, Image
 import time
+from app.config import ROOT_DIR
 
 # 설정값
 SIMILARITY_THRESHOLD = 0.45
@@ -18,8 +20,10 @@ MAX_LOST_FRAMES = 2
 THRESHOLD = 0.8
 TRACKER_MAX_AGE = 90
 DELETE_TIMEOUT = 300
-DB_PATH = "data\Comfile_Coffee_DB.db"
-SYSTEM_FONT_PATH = "app/assets/fonts/NotoSansKR-Medium.ttf"
+
+# 경로 설정
+DB_PATH = os.path.join(ROOT_DIR, "faces.db")
+SYSTEM_FONT_PATH = os.path.join(ROOT_DIR, "app", "assets", "fonts", "NotoSansKR-Medium.ttf")
 
 # 전역 변수
 face_stable_count = 0
