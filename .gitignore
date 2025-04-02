@@ -17,3 +17,9 @@ env/
 # Editor settings
 .vscode/
 .idea/
+
+# Google Cloud credentials
+credentials.json
+app/credentials.json
+app/core/credentials.json
+app/config/

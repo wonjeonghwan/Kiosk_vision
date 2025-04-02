@@ -18,6 +18,7 @@ from app.config import BOLD_FONT_PATH, LIGHT_FONT_PATH, BACK_IMG, LOGO_IMG, CHAR
 from app.core.face_detection import extract_face_embeddings, track_target_face, find_best_match, initialize_database, MAX_LOST_FRAMES, save_face
 from .base_screen import BaseScreen
 from app.service.api_client import register_user
+from app.core.tts import TTSManager
 
 # 설정값
 SIMILARITY_THRESHOLD = 0.45
@@ -101,6 +102,9 @@ class WaitingScreen(BaseScreen):
             valign='middle'
         )
         self.layout.add_widget(self.label)
+        # TTS 초기화
+        self.tts = TTSManager()
+        self.tts.play_async("녹색 사각형 안에서 정면을 바라보세요")
         
         self.target_embedding = None
         self.current_encoding = None
