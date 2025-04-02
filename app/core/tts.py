@@ -9,6 +9,7 @@ import glob
 import time
 import subprocess
 from pydub import AudioSegment
+import pygame
 
 # Google Cloud TTS 대신 gTTS 사용
 try:
@@ -27,15 +28,6 @@ try:
 except ImportError:
     USE_GOOGLE_CLOUD = False
     print("⚠️ Google Cloud TTS 라이브러리를 찾을 수 없습니다.")
-
-# playsound 라이브러리 사용
-try:
-    from playsound import playsound
-    USE_PLAYSOUND = True
-    print("✅ playsound 라이브러리 사용")
-except ImportError:
-    USE_PLAYSOUND = False
-    print("⚠️ playsound 라이브러리를 찾을 수 없습니다. pip install playsound로 설치하세요.")
 
 class TTSManager:
     """TTS 관리 클래스"""
@@ -171,15 +163,13 @@ class TTSManager:
             time.sleep(1)  # 잠시 대기
             print(f"▶️ 테스트 음성 재생 시작: {audio_file}")
             
-            # playsound로 오디오 재생
-            if USE_PLAYSOUND:
-                playsound(audio_file)
-            else:
-                # 대체 방법: 시스템 기본 플레이어로 재생
-                if os.name == 'nt':  # Windows
-                    os.startfile(audio_file)
-                else:  # macOS, Linux
-                    subprocess.call(('open', audio_file))
+            # pygame으로 오디오 재생
+            pygame.mixer.init()
+            pygame.mixer.music.load(audio_file)
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                pygame.time.Clock().tick(10)
+            pygame.mixer.quit()
                 
             print("✅ 테스트 음성 재생 완료")
         except Exception as e:
@@ -215,9 +205,7 @@ class TTSManager:
             elif USE_GTTS:
                 print("🔊 gTTS 사용")
                 try:
-                    print(f"🔊 gTTS 음성 생성 시작: {save_path_mp3}")
                     tts = gTTS(text=text, lang='ko')
-                    print(f"🔊 gTTS 음성 생성 완료: {save_path_mp3}")
                     tts.save(save_path_mp3)
                     print("✅ gTTS 음성 생성 완료")
                 except Exception as e:
@@ -260,15 +248,13 @@ class TTSManager:
                 if audio_path and os.path.exists(audio_path):
                     print(f"▶️ 음성 재생 시작: {audio_path}")
                     
-                    # playsound로 오디오 재생
-                    if USE_PLAYSOUND:
-                        playsound(audio_path)
-                    else:
-                        # 대체 방법: 시스템 기본 플레이어로 재생
-                        if os.name == 'nt':  # Windows
-                            os.startfile(audio_path)
-                        else:  # macOS, Linux
-                            subprocess.call(('open', audio_path))
+                    # pygame으로 오디오 재생
+                    pygame.mixer.init()
+                    pygame.mixer.music.load(audio_path)
+                    pygame.mixer.music.play()
+                    while pygame.mixer.music.get_busy():
+                        pygame.time.Clock().tick(10)
+                    pygame.mixer.quit()
                         
                     print("✅ 음성 재생 완료")
                 else:
