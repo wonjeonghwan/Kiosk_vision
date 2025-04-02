@@ -1,5 +1,5 @@
 class VADWhisperLoop:
-    def __init__(self, callback, model_size="small", sample_rate=16000):
+    def __init__(self, callback, model_size="base", sample_rate=16000):
         import whisper
         import webrtcvad
         import numpy as np

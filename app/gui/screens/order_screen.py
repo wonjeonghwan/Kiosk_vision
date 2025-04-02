@@ -23,7 +23,7 @@ from app.gui.widgets import RoundedButton, CartItemWidget, DividerLine, ChatBubb
 from .base_screen import BaseScreen
 from app.core.face_detection import extract_face_embeddings, track_target_face, find_best_match, initialize_database, MAX_LOST_FRAMES
 from app.core.vad_whisper_loop import VADWhisperLoop
-from app.service.api_client import chatbot_session_init, chatbot_reply, chatbot_session_clear
+from app.service.api_client import chatbot_session_init, chatbot_reply, chatbot_session_clear, chatbot_session_save
 from PIL import Image as PILImage, ImageDraw, ImageFont
 import sqlite3
 import time
@@ -208,6 +208,10 @@ class OrderScreen(BaseScreen):
 
     def proceed_to_payment(self, instance):
         """결제 화면으로 이동"""
+        ## TODO : LLM 과 결제 확인 후 결제 화면으로 이동
+        self.session_id = self.manager.get_screen('waiting').target_embedding
+        chatbot_session_save(self.session_id)
+        chatbot_session_clear(self.session_id)
         self.manager.current = "payment"
 
     def clear_cart(self):
@@ -235,8 +239,8 @@ class OrderScreen(BaseScreen):
         if self.chat_event:
             self.chat_event.cancel()
         ## 채팅 버퍼 클리어 
-        sesseion_id = self.manager.get_screen('waiting').target_embedding
-        chatbot_session_clear(sesseion_id)
+        self.session_id = self.manager.get_screen('waiting').target_embedding
+        chatbot_session_clear(self.session_id)
         # STT 종료
         if hasattr(self, 'vad_loop'):
             self.vad_loop.stop()
@@ -375,6 +379,16 @@ class OrderScreen(BaseScreen):
                         from kivy.clock import Clock
                         print("⏰ UI 업데이트 스케줄")
                         Clock.schedule_once(lambda dt: self._update_chat_ui(response))
+                        
+                        # "결제 수단"이 포함된 경우 결제 버튼 활성화
+                        ok_list = ["결제 수단", "주문이 확인되었습니다", "결제 방법을"]
+                        if ok_list in response:
+                            print("💰 결제 수단 관련 응답 감지")
+                            # STT 종료
+                            if hasattr(self, 'vad_loop'):
+                                self.vad_loop.stop()
+                            Clock.schedule_once(lambda dt: self._activate_payment_button())
+                            
                 except Exception as e:
                     print(f"❌ LLM 응답 처리 중 오류: {str(e)}")
                 finally:
@@ -389,7 +403,7 @@ class OrderScreen(BaseScreen):
             print(f"❌ 처리 중 오류: {str(e)}")
             self._input_lock = False
             print("🔓 _input_lock 해제 (오류)")
-            
+
     def _update_chat_ui(self, response):
         """채팅 UI 업데이트 (메인 스레드에서 실행)"""
         print("🎨 UI 업데이트 시작")
@@ -400,6 +414,27 @@ class OrderScreen(BaseScreen):
             print("✅ UI 업데이트 완료")
         except Exception as e:
             print(f"❌ UI 업데이트 중 오류: {str(e)}")
+
+    def _activate_payment_button(self):
+        """결제 버튼 활성화 및 시각적 효과 추가"""
+        try:
+            # 결제 버튼 활성화
+            self.pay_button.disabled = False
+            self.pay_button.opacity = 1
+            
+            # 결제 버튼에 시각적 효과 추가
+            from kivy.animation import Animation
+            anim = Animation(opacity=0.7, duration=0.5) + Animation(opacity=1, duration=0.5)
+            anim.repeat = True
+            anim.start(self.pay_button)
+            
+            # 결제 안내 메시지 추가
+            payment_bubble = ChatBubble("SYSTEM", "결제 버튼을 눌러주세요.")
+            self.chat_box.add_widget(payment_bubble)
+            Animation(scroll_y=0, duration=0.3).start(self.chat_scroll)
+            
+        except Exception as e:
+            print(f"❌ 결제 버튼 활성화 중 오류: {str(e)}")
 
     
 
