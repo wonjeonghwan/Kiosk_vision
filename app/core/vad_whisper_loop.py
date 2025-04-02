@@ -96,7 +96,14 @@ class VADWhisperLoop:
             try:
                 print("🎯 STT 추론 시작")
                 audio_np = self.np.concatenate(self.audio_data, axis=0).flatten().astype(self.np.float32) / 32768.0
-                result = self.model.transcribe(audio_np, fp16=False, language="ko")
+                # 한국어만 인식하도록 설정
+                result = self.model.transcribe(
+                    audio_np,
+                    fp16=False,
+                    language="ko",
+                    task="transcribe",
+                    initial_prompt="이 오디오는 한국어로 된 음성입니다."
+                )
                 text = result.get("text", "").strip()
                 print(f"📝 인식된 텍스트: {text}")
                 
