@@ -230,12 +230,39 @@ class OrderScreen(BaseScreen):
         # self.chat_index = 0
         # self.chat_box.clear_widgets()
         # self.chat_event = Clock.schedule_interval(self.add_next_chat_message, 3.0)
-        # 챗봇 세션 초기화 TODO : session_id 전역화 
-        self.session_id = self.manager.get_screen('waiting').target_embedding
-        chatbot_session_init(self.session_id)
-        # STT 시작
-        self.vad_loop = VADWhisperLoop(callback=self.handle_user_input)
-        self.vad_loop.start()
+        
+        # TTS로 인사 메시지 재생
+        self.play_greeting_message()
+        
+        # 챗봇 세션 초기화는 별도 스레드에서 실행
+        import threading
+        threading.Thread(target=self.init_chatbot_session, daemon=True).start()
+
+    def play_greeting_message(self):
+        """TTS로 인사 메시지 재생"""
+        try:
+            from app.core.tts import TTSManager
+            tts_manager = TTSManager()
+            greeting = "안녕하세요? 오랜만에 오셨네요? 잘 지내셨나요? 원하시는 메뉴가 있으시면 말씀해주세요."
+            tts_manager.play_async(greeting)
+            
+            # 인사 메시지를 채팅창에 추가
+            greeting_bubble = ChatBubble("LLM", greeting)
+            self.chat_box.add_widget(greeting_bubble)
+        except Exception as e:
+            print(f"❌ 인사 메시지 재생 중 오류: {str(e)}")
+            
+    def init_chatbot_session(self):
+        """챗봇 세션 초기화"""
+        try:
+            self.session_id = self.manager.get_screen('waiting').target_embedding
+            chatbot_session_init(self.session_id)
+            
+            # 챗봇 세션 초기화 완료 후 VADWhisperLoop 시작
+            from kivy.clock import Clock
+            Clock.schedule_once(self.start_vad_loop, 1.0)
+        except Exception as e:
+            print(f"❌ 챗봇 세션 초기화 중 오류: {str(e)}")
 
     def on_leave(self):
         """화면 이탈 시 호출"""
@@ -441,7 +468,7 @@ class OrderScreen(BaseScreen):
             anim.start(self.pay_button)
             
             # 결제 안내 메시지 추가
-            payment_bubble = ChatBubble("SYSTEM", "결제 버튼을 눌러주세요.")
+            payment_bubble = ChatBubble("LLM", "결제 버튼을 눌러주세요.")
             self.chat_box.add_widget(payment_bubble)
             # 스크롤 애니메이션 제거
             self.chat_scroll.scroll_y = 0
@@ -450,6 +477,12 @@ class OrderScreen(BaseScreen):
             
         except Exception as e:
             print(f"❌ 결제 버튼 활성화 중 오류: {str(e)}")
+
+    def start_vad_loop(self, dt):
+        """VADWhisperLoop 시작"""
+        print("🎤 VADWhisperLoop 시작")
+        self.vad_loop = VADWhisperLoop(callback=self.handle_user_input)
+        self.vad_loop.start()
 
     
 
