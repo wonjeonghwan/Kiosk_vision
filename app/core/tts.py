@@ -160,7 +160,7 @@ class TTSManager:
             print(f"✅ 테스트 음성 파일 생성 완료: {test_file_wav}")
             
             # 음성 재생 (별도 스레드에서)
-            threading.Thread(target=self._play_test_audio, args=(test_file_wav,), daemon=True).start()
+            threading.Thread(target=self._play_test_audio, args=(test_file_wav,)).start()
             
         except Exception as e:
             print(f"❌ TTS 테스트 중 오류: {str(e)}")
@@ -215,7 +215,9 @@ class TTSManager:
             elif USE_GTTS:
                 print("🔊 gTTS 사용")
                 try:
+                    print(f"🔊 gTTS 음성 생성 시작: {save_path_mp3}")
                     tts = gTTS(text=text, lang='ko')
+                    print(f"🔊 gTTS 음성 생성 완료: {save_path_mp3}")
                     tts.save(save_path_mp3)
                     print("✅ gTTS 음성 생성 완료")
                 except Exception as e:
@@ -279,7 +281,7 @@ class TTSManager:
             
     def play_async(self, text):
         """비동기로 음성 재생"""
-        threading.Thread(target=self.play_audio, args=(None, text), daemon=True).start()
+        threading.Thread(target=self.play_audio, args=(None, text)).start()
         
 # 싱글톤 인스턴스 생성
 tts_manager = TTSManager()
