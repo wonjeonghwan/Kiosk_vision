@@ -410,7 +410,8 @@ class OrderScreen(BaseScreen):
         try:
             llm_bubble = ChatBubble("LLM", response)
             self.chat_box.add_widget(llm_bubble)
-            Animation(scroll_y=0, duration=0.3).start(self.chat_scroll)
+            # 스크롤 애니메이션 제거
+            self.chat_scroll.scroll_y = 0
             print("✅ UI 업데이트 완료")
         except Exception as e:
             print(f"❌ UI 업데이트 중 오류: {str(e)}")
@@ -431,7 +432,8 @@ class OrderScreen(BaseScreen):
             # 결제 안내 메시지 추가
             payment_bubble = ChatBubble("SYSTEM", "결제 버튼을 눌러주세요.")
             self.chat_box.add_widget(payment_bubble)
-            Animation(scroll_y=0, duration=0.3).start(self.chat_scroll)
+            # 스크롤 애니메이션 제거
+            self.chat_scroll.scroll_y = 0
             
         except Exception as e:
             print(f"❌ 결제 버튼 활성화 중 오류: {str(e)}")
