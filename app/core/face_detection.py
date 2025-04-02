@@ -106,8 +106,8 @@ def find_best_match(encoding, threshold=THRESHOLD):
 
     for row in rows:
         try:
-            # 바이트 데이터를 numpy 배열로 변환
-            stored_encoding = np.frombuffer(row[2], dtype=np.float64)
+            # pickle로 저장된 데이터를 numpy 배열로 복원
+            stored_encoding = pickle.loads(row[2])
             
             # Metric 1: 전체 인코딩 코사인 유사도
             norm_stored = stored_encoding / np.linalg.norm(stored_encoding)

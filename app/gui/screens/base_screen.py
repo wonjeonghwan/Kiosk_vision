@@ -43,14 +43,6 @@ class BaseScreen(Screen):
         
         self.add_widget(self.layout)
     
-    def on_enter(self):
-        """화면 진입 시 카메라 시작"""
-        self.start_camera()
-    
-    def on_leave(self):
-        """화면 이탈 시 카메라 중지"""
-        self.stop_camera()
-    
     def start_camera(self):
         """카메라 시작"""
         if self.camera is None:
@@ -65,20 +57,7 @@ class BaseScreen(Screen):
             self.camera = None
     
     def update_camera(self, dt):
-        """카메라 프레임 업데이트"""
-        if self.camera is None:
-            return
-            
-        ret, frame = self.camera.read()
-        if not ret:
-            print("카메라 프레임 읽기 실패")
-            return
-            
-        try:
-            # 얼굴 추적 확인
-            self.check_face_tracking(frame)
-        except Exception as e:
-            print(f"얼굴 추적 중 오류 발생: {e}")
+        pass
     
     def check_face_tracking(self, frame):
         """얼굴 추적 확인"""

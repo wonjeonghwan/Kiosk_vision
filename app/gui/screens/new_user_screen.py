@@ -147,4 +147,18 @@ class NewUserScreen(BaseScreen):
         if waiting_screen:
             waiting_screen.save_face(name)
             # order 화면으로 전환
-            self.manager.current = 'order' 
+            self.manager.current = 'order'
+    
+    def start_camera(self):
+        if not self.camera:
+            self.camera = cv2.VideoCapture(0)
+            Clock.schedule_interval(self.update_camera, 1.0/30.0)
+                
+    def stop_camera(self):
+        if self.camera:
+            self.camera.release()
+            self.camera = None
+            Clock.unschedule(self.update_camera)
+    
+    def update_camera(self, dt):
+        pass
