@@ -17,6 +17,7 @@ from kivy.graphics.texture import Texture
 from app.config import BOLD_FONT_PATH, LIGHT_FONT_PATH, BACK_IMG, LOGO_IMG, CHARACTER_IMG
 from app.core.face_detection import extract_face_embeddings, track_target_face, find_best_match, initialize_database, MAX_LOST_FRAMES, save_face
 from .base_screen import BaseScreen
+from app.service.api_client import register_user
 
 # 설정값
 SIMILARITY_THRESHOLD = 0.45
@@ -150,10 +151,12 @@ class WaitingScreen(BaseScreen):
                 
                 # 매칭 결과가 있는 경우
                 if match_result is not None and match_result[0] is not None:
+                    #
                     print(f"기존 사용자 발견: ID:{match_result[0]}, NAME:{match_result[1]}")
                     self.target_embedding = face_encoding
                     self.manager.current = "order"
                 elif progress >= 100:
+                    #
                     print("신규 사용자 발견")
                     self.target_embedding = face_encoding
                     self.manager.current = "new_user"
@@ -204,8 +207,11 @@ class WaitingScreen(BaseScreen):
     def save_face(self, name):
         """얼굴 정보 저장"""
         if self.current_encoding is not None:
-            # 얼굴 정보를 데이터베이스에 저장
+            # 얼굴 정보를 프론트 데이터베이스에 저장
             save_face(name, self.current_encoding)
+            # 서버 신규 사용자 등록 
+            dummy_number = "010-0000-0000"
+            register_user(name,dummy_number,self.current_encoding)
             # waiting 화면으로 돌아가기
             self.manager.current = 'waiting'
         else:
