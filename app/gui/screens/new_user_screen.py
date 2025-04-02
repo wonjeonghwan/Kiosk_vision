@@ -36,6 +36,10 @@ class NewUserScreen(BaseScreen):
         self.lost_frame_count = 0
         self.last_tracking_time = time.time()
         
+        # STT 초기화
+        self.vad_loop = None
+        self.is_listening = False
+        
         # 배경 이미지
         self.bg_image = Image(
             source=BACK_IMG,
@@ -115,6 +119,45 @@ class NewUserScreen(BaseScreen):
         
         self.add_widget(self.layout)
     
+    def on_enter(self):
+        """화면 진입 시 호출"""
+        super(NewUserScreen, self).on_enter()
+        self.start_camera()
+        # STT 시작
+        self.start_stt()
+
+    def on_leave(self):
+        """화면 이탈 시 호출"""
+        super(NewUserScreen, self).on_leave()
+        self.stop_camera()
+        # STT 종료
+        self.stop_stt()
+
+    def start_stt(self):
+        """STT 시작"""
+        if not self.vad_loop:
+            from app.core.vad_whisper_loop import VADWhisperLoop
+            self.vad_loop = VADWhisperLoop(callback=self.handle_stt_input)
+            self.vad_loop.start()
+            self.is_listening = True
+            # 안내 메시지 추가
+            self.name_input.text = "이름을 말씀해주세요..."
+
+    def stop_stt(self):
+        """STT 종료"""
+        if self.vad_loop:
+            self.vad_loop.stop()
+            self.vad_loop = None
+        self.is_listening = False
+
+    def handle_stt_input(self, text):
+        """STT 입력 처리"""
+        if self.is_listening:
+            # 이름 입력 필드 업데이트
+            self.name_input.text = text.strip()
+            # 자동으로 확인 처리
+            self.on_confirm(None)
+
     def on_keyboard_input(self, key):
         """키보드 입력 처리"""
         if key == 'backspace':
@@ -123,6 +166,9 @@ class NewUserScreen(BaseScreen):
             self.on_confirm(None)
         else:
             self.name_input.text += key
+            # 키보드 입력 시 STT 중지
+            if self.is_listening:
+                self.stop_stt()
     
     def on_confirm(self, instance):
         """확인 버튼 클릭 시 호출"""
