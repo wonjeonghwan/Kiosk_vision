@@ -9,7 +9,7 @@ import numpy as np
 import hashlib
 import json
 
-API_BASE = "http://192.168.10.70:8080"
+API_BASE = "http://192.168.20.109:8080"
 session_lock = threading.Lock()  # 전역 락 추가
 
 def _encode_session_id(session_id):
