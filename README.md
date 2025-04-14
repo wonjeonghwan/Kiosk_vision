@@ -1,55 +1,47 @@
-# 4ZO 키오스크
+# AI Smart Kiosk System
 
-## 프로젝트 구조
-```
-4ZO/
-├── app/
-│   ├── assets/
-│   │   ├── fonts/
-│   │   │   ├── NotoSansKR-Bold.ttf
-│   │   │   ├── NotoSansKR-Light.ttf
-│   │   │   └── NotoSansKR-Medium.ttf
-│   │   └── images/
-│   │       ├── background.png
-│   │       ├── logo.png
-│   │       ├── character.png
-│   │       └── card.png
-│   ├── core/
-│   │   └── face_detection.py
-│   ├── gui/
-│   │   ├── screens/
-│   │   │   ├── base_screen.py
-│   │   │   ├── waiting_screen.py
-│   │   │   ├── new_user_screen.py
-│   │   │   ├── order_screen.py
-│   │   │   ├── order_issuance_screen.py
-│   │   │   └── payment_screen.py
-│   │   └── widgets/
-│   │       └── touch_keyboard.py
-│   ├── config.py
-│   └── __init__.py
-├── faces.db
-└── run.py
-```
+> AI 기반의 **스마트 키오스크 시스템**입니다.  
+> 얼굴 인식을 통해 사용자 로그인을 지원하며, 맞춤형 주문 및 추천 기능을 포함합니다.
 
-## 실행 방법
-1. 프로젝트를 클론합니다:
-```bash
-git clone [repository-url]
-cd 4ZO
-```
+## 🧠 프로젝트 개요
 
-2. 필요한 패키지를 설치합니다:
-```bash
-pip install -r requirements.txt
-```
+고령층을 위한 오프라인 매장 **AI 키오스크**입니다.  
+- 얼굴 인식을 통해 사용자를 식별하고,
+- 개인화된 메뉴 추천 및 주문을 지원합니다.
+- 프론트엔드와 AI 모델이 통합되어 사용자 친화적인 경험을 제공합니다.
 
-3. 프로젝트 루트 디렉토리에서 실행합니다:
-```bash
-python run.py
-```
+## 👤 담당 역할 (원정환)
+### ✅ 1. 얼굴 인식 기반 로그인 시스템 구현
 
-## 주의사항
-- 프로젝트는 반드시 루트 디렉토리(`4ZO/`)에서 실행해야 합니다.
-- 모든 자산 파일(폰트, 이미지)은 지정된 경로에 있어야 합니다.
-- 데이터베이스 파일(`faces.db`)은 자동으로 생성됩니다. 
+- **Face_Recognition**을 활용한 얼굴 검출
+- **FaceNet 기반 임베딩 생성** 및 **SQLite 벡터 DB**를 통한 유사도 기반 사용자 매칭
+- 신규 사용자 자동 등록: 일정 시간 이상 감지된 새로운 얼굴을 진행 바(Progress Bar)와 함께 등록
+- 기존 사용자 감지 시 실시간 이름 매칭 및 중복 등록 방지
+- **UUID 기반 사용자 식별자** 생성으로 동명이인 처리
+
+### ✅ 2. 얼굴 기반 DeepSORT 추적 기능
+- Face_Recognition + DeepSORT 연동으로 실시간 얼굴 추적
+- 특정 사용자만 필터링하여 추적하도록 수정 (불필요한 객체 제거)
+- 얼굴 인식 완료 시, DeepSORT 모드로 자동 전환
+
+### ✅ 3. Vision 모듈 상태 제어 및 전환
+- 얼굴 인식 → 등록 → 추적 → 재인식 루프 설계
+- 일정 프레임 이상 미감지 시 자동 얼굴 인식 모드 복귀
+- 시스템 흐름에 따른 유연한 상태 전환 구현
+
+### ✅ 4. 프론트엔드 인터페이스 개발
+- **Kivy** 기반 UI 개발
+- 얼굴 인식 결과 및 사용자 정보 화면에 시각적으로 표시
+- 한글 폰트를 적용한 사용자 친화적 인터페이스
+
+---
+
+## 🛠 사용 기술
+
+| 구분        | 기술/라이브러리 |
+|-------------|----------------|
+| Language    | Python         |
+| Vision      | OpenCV, YOLOv8, FaceNet, DeepSORT |
+| DB          | SQLite         |
+| UI          | Kivy           |
+| 기타        | PIL, NumPy, UUID 등 |
