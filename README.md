@@ -44,6 +44,7 @@ https://hail-giver-aa3.notion.site/1d5abb7c3763808a800cf77f6970db07?pvs=4
 - DB에 유사한 얼굴이 없을 때 (신규 사용자): 일정 프레임 이상 감지된 새로운 얼굴의 벡터값을 이름과 함께 DB에 등록
 - DB에 유사한 얼굴 감지 시 : DB 정보 불러온 후 메뉴 주문 화면으로 전환
 - 사용자 ID Increment 생성으로 동명이인 처리
+![image](https://github.com/user-attachments/assets/e0074dcf-2cd7-4ffe-a1a5-0eea20012890)
 
 ### ✅ 2. 얼굴 기반 DeepSORT 추적 기능
 - 얼굴인식 단계에서 감지한 얼굴 벡터값을 DeepSORT로 연동하여 얼굴 추적
@@ -64,5 +65,8 @@ https://hail-giver-aa3.notion.site/1d5abb7c3763808a800cf77f6970db07?pvs=4
 - 한글 폰트를 적용한 사용자 친화적 인터페이스
 
 ---
+![image](https://github.com/user-attachments/assets/5713b185-b3ef-44de-8998-d79fe2e78435)
+![image](https://github.com/user-attachments/assets/755afa8e-fc2a-4d5d-bf6d-4c9be19d0f4a)
+
 
 
